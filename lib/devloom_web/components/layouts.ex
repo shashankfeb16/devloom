@@ -6,68 +6,104 @@ defmodule DevloomWeb.Layouts do
 
   attr :flash, :map, required: true
   attr :current_scope, :map, default: nil
+  attr :active_view, :string, default: "board"
   slot :inner_block, required: true
 
   def app(assigns) do
     ~H"""
     <a href="#main-content" class="skip-link">Skip to content</a>
     <div class="workspace-shell">
-      <aside class="workspace-sidebar" aria-label="Workspace navigation">
-        <a href={~p"/"} class="brand" aria-label="Devloom home">
-          <img src={~p"/images/logo.svg"} alt="" width="36" height="36" />
-          <span>devloom<span class="brand-period">.</span></span>
-        </a>
-        <div class="workspace-label">
-          <span class="workspace-avatar">D</span><div>
-            <strong>Developer workspace</strong><span>Building, together</span>
-          </div>
-        </div>
-        <nav class="primary-nav" aria-label="Primary">
-          <p class="sidebar-eyebrow">WORKSPACE</p>
-          <a href="#overview" class="nav-item active" aria-current="page"><.icon
-            name="hero-squares-2x2"
-            class="size-5"
-          /><span>Overview</span><span class="nav-active-dot"></span></a>
-          <a href="#roadmap" class="nav-item"><.icon name="hero-map" class="size-5" /><span>Build plan</span></a>
+      <header class="workspace-topbar">
+        <.link navigate={~p"/"} class="brand" aria-label="Devloom home">
+          <img src={~p"/images/logo.svg"} alt="" width="29" height="29" />
+          <span>devloom</span>
+        </.link>
+        <nav class="breadcrumb" aria-label="Breadcrumb">
+          <span>Workspace</span><.icon name="hero-chevron-right" class="size-3" />
+          <span>Devloom</span><.icon name="hero-chevron-right" class="size-3" />
+          <strong>Boards</strong>
         </nav>
-        <div class="sidebar-planned">
-          <p class="sidebar-eyebrow">COMING TO YOUR WORKSPACE</p>
-          <div class="planned-nav-item">
-            <.icon name="hero-rectangle-group" class="size-4" /><span>Kanban board</span><small>Next</small>
-          </div>
-          <div class="planned-nav-item">
-            <.icon name="hero-clipboard-document-check" class="size-4" /><span>Work items</span>
-          </div>
-          <div class="planned-nav-item">
-            <.icon name="hero-document-text" class="size-4" /><span>Docs &amp; handbook</span>
-          </div>
-          <div class="planned-nav-item">
-            <.icon name="hero-chat-bubble-left-right" class="size-4" /><span>Team chat</span>
-          </div>
-          <div class="planned-nav-item">
-            <.icon name="hero-video-camera" class="size-4" /><span>Meetings</span>
-          </div>
+        <div class="topbar-right">
+          <span
+            id="board-live-status"
+            class="live-status"
+            phx-connected={JS.remove_class("offline")}
+            phx-disconnected={JS.add_class("offline")}
+          >
+            <span class="live-dot"></span><span class="live-label">Live sync</span><span class="reconnect-label">Reconnecting</span>
+          </span>
+          <span class="topbar-divider"></span>
+          <span class="guest-avatar" title="Guest workspace — accounts will be added later"><.icon
+            name="hero-user"
+            class="size-4"
+          /></span>
         </div>
+      </header>
+      <aside class="workspace-sidebar" aria-label="Workspace navigation">
+        <div class="project-switcher">
+          <span class="project-avatar">D</span>
+          <div><strong>Devloom</strong><span>Developer workspace</span></div>
+          <span class="project-local" title="Local project"><.icon
+            name="hero-code-bracket"
+            class="size-4"
+          /></span>
+        </div>
+        <nav class="primary-nav" aria-label="Project">
+          <p class="sidebar-eyebrow">PROJECT</p>
+          <div class="nav-section">
+            <.icon name="hero-rectangle-group" class="size-[18px]" /><span>Boards</span><.icon
+              name="hero-chevron-down"
+              class="ml-auto size-3"
+            />
+          </div>
+          <button
+            id="nav-board"
+            class={["nav-item", @active_view == "board" && "active"]}
+            phx-click="switch_view"
+            phx-value-view="board"
+            aria-current={@active_view == "board" && "page"}
+          >
+            <.icon name="hero-view-columns" class="size-4" /><span>Team board</span>
+          </button>
+          <button
+            id="nav-work-items"
+            class={["nav-item", @active_view == "list" && "active"]}
+            phx-click="switch_view"
+            phx-value-view="list"
+            aria-current={@active_view == "list" && "page"}
+          >
+            <.icon name="hero-clipboard-document-list" class="size-4" /><span>Work items</span>
+          </button>
+          <div class="sidebar-rule"></div>
+          <p class="sidebar-eyebrow">YOUR WORKSPACE, GROWING</p>
+          <div class="planned-nav-item" aria-disabled="true">
+            <.icon name="hero-book-open" class="size-[18px]" /><span>Documentation</span><small>Soon</small>
+          </div>
+          <div class="planned-nav-item" aria-disabled="true">
+            <.icon name="hero-chat-bubble-left-right" class="size-[18px]" /><span>Team chat</span><small>Soon</small>
+          </div>
+          <div class="planned-nav-item" aria-disabled="true">
+            <.icon name="hero-video-camera" class="size-[18px]" /><span>Meetings</span><small>Soon</small>
+          </div>
+        </nav>
         <div class="sidebar-bottom">
-          <div class="sidebar-note">
-            <span class="sidebar-note-icon"><.icon name="hero-sparkles" class="size-4" /></span><p>
-              Small team.<br /><strong>Shared ambition.</strong>
+          <div class="workspace-note">
+            <span class="note-icon"><.icon name="hero-command-line" class="size-[18px]" /></span><strong>A little less overhead.<br />A little more building.</strong><p>
+              Your team's work, in one place.
             </p>
           </div>
-          <div class="sidebar-environment">
-            <span></span> LOCAL WORKSPACE <span class="environment-version">v0.1</span>
+          <button id="board-help" class="sidebar-help" phx-click="show_help"><.icon
+            name="hero-question-mark-circle"
+            class="size-[18px]"
+          /><span>Help &amp; shortcuts</span><kbd>?</kbd></button>
+          <div class="sidebar-identity">
+            <span class="identity-icon"><.icon name="hero-user-group" class="size-4" /></span><div>
+              <strong>Shared workspace</strong><span>Working together, in real time</span>
+            </div>
           </div>
         </div>
       </aside>
-      <div class="workspace-body">
-        <header class="workspace-topbar">
-          <div class="breadcrumb">
-            <span>Workspace</span><.icon name="hero-chevron-right" class="size-3" /><strong>Overview</strong>
-          </div>
-          <span class="local-badge"><span></span> Local development</span>
-        </header>
-        <main id="main-content" class="workspace-content">{render_slot(@inner_block)}</main>
-      </div>
+      <main id="main-content" class="workspace-content">{render_slot(@inner_block)}</main>
     </div>
     <.flash_group flash={@flash} />
     """
