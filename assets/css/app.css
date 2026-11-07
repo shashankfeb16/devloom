@@ -1,0 +1,246 @@
+/* See the Tailwind configuration guide for advanced usage
+   https://tailwindcss.com/docs/configuration */
+
+@import "tailwindcss" source(none);
+@import "phoenix-colocated/devloom/colocated.css";
+@source "../css";
+@source "../js";
+@source "../../lib/devloom_web";
+/* Required for Tailwind to automatically pick up changes in colocated CSS files in dev */
+@source "../../_build/dev/phoenix-colocated/devloom/*/";
+
+/* A Tailwind plugin that makes "hero-#{ICON}" classes available.
+   The heroicons installation itself is managed by your mix.exs */
+@plugin "../vendor/heroicons";
+
+/* daisyUI Tailwind Plugin. */
+@plugin "daisyui/packages/bundle/daisyui" {
+  themes: false;
+}
+
+/* daisyUI theme plugin.
+  We ship with two themes, a light one inspired on Phoenix colors and a dark one inspired
+  on Elixir colors. Build your own at: https://daisyui.com/theme-generator/ */
+@plugin "daisyui/packages/bundle/daisyui-theme" {
+  name: "dark";
+  default: false;
+  prefersdark: true;
+  color-scheme: "dark";
+  --color-base-100: oklch(30.33% 0.016 252.42);
+  --color-base-200: oklch(25.26% 0.014 253.1);
+  --color-base-300: oklch(20.15% 0.012 254.09);
+  --color-base-content: oklch(97.807% 0.029 256.847);
+  --color-primary: oklch(58% 0.233 277.117);
+  --color-primary-content: oklch(96% 0.018 272.314);
+  --color-secondary: oklch(58% 0.233 277.117);
+  --color-secondary-content: oklch(96% 0.018 272.314);
+  --color-accent: oklch(60% 0.25 292.717);
+  --color-accent-content: oklch(96% 0.016 293.756);
+  --color-neutral: oklch(37% 0.044 257.287);
+  --color-neutral-content: oklch(98% 0.003 247.858);
+  --color-info: oklch(58% 0.158 241.966);
+  --color-info-content: oklch(97% 0.013 236.62);
+  --color-success: oklch(60% 0.118 184.704);
+  --color-success-content: oklch(98% 0.014 180.72);
+  --color-warning: oklch(66% 0.179 58.318);
+  --color-warning-content: oklch(98% 0.022 95.277);
+  --color-error: oklch(58% 0.253 17.585);
+  --color-error-content: oklch(96% 0.015 12.422);
+  --radius-selector: 0.25rem;
+  --radius-field: 0.25rem;
+  --radius-box: 0.5rem;
+  --size-selector: 0.21875rem;
+  --size-field: 0.21875rem;
+  --border: 1.5px;
+  --depth: 1;
+  --noise: 0;
+}
+
+@plugin "daisyui/packages/bundle/daisyui-theme" {
+  name: "light";
+  default: true;
+  prefersdark: false;
+  color-scheme: "light";
+  --color-base-100: oklch(98% 0 0);
+  --color-base-200: oklch(96% 0.001 286.375);
+  --color-base-300: oklch(92% 0.004 286.32);
+  --color-base-content: oklch(21% 0.006 285.885);
+  --color-primary: oklch(70% 0.213 47.604);
+  --color-primary-content: oklch(98% 0.016 73.684);
+  --color-secondary: oklch(55% 0.027 264.364);
+  --color-secondary-content: oklch(98% 0.002 247.839);
+  --color-accent: oklch(0% 0 0);
+  --color-accent-content: oklch(100% 0 0);
+  --color-neutral: oklch(44% 0.017 285.786);
+  --color-neutral-content: oklch(98% 0 0);
+  --color-info: oklch(62% 0.214 259.815);
+  --color-info-content: oklch(97% 0.014 254.604);
+  --color-success: oklch(70% 0.14 182.503);
+  --color-success-content: oklch(98% 0.014 180.72);
+  --color-warning: oklch(66% 0.179 58.318);
+  --color-warning-content: oklch(98% 0.022 95.277);
+  --color-error: oklch(58% 0.253 17.585);
+  --color-error-content: oklch(96% 0.015 12.422);
+  --radius-selector: 0.25rem;
+  --radius-field: 0.25rem;
+  --radius-box: 0.5rem;
+  --size-selector: 0.21875rem;
+  --size-field: 0.21875rem;
+  --border: 1.5px;
+  --depth: 1;
+  --noise: 0;
+}
+
+/* Add variants based on LiveView classes */
+@custom-variant phx-click-loading (.phx-click-loading&, .phx-click-loading &);
+@custom-variant phx-submit-loading (.phx-submit-loading&, .phx-submit-loading &);
+@custom-variant phx-change-loading (.phx-change-loading&, .phx-change-loading &);
+
+/* Use the data attribute for dark mode  */
+@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
+
+/* Make LiveView wrapper divs transparent for layout */
+[data-phx-session], [data-phx-teleported-src] { display: contents }
+
+/* This file is for your main application CSS */
+
+/* Devloom workspace */
+:root { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #24343a; background: #f7f8f6; font-synthesis: none; }
+html { scroll-behavior: smooth; scroll-padding-top: 26px; }
+body { margin: 0; }
+button, a { -webkit-tap-highlight-color: transparent; }
+a, button { transition: background-color .18s, color .18s, border-color .18s, transform .18s; }
+a:focus-visible, button:focus-visible { outline: 3px solid #e97850; outline-offset: 4px; }
+.skip-link { position: fixed; top: -70px; left: 20px; z-index: 100; background: #fff; padding: 12px 18px; border-radius: 8px; }
+.skip-link:focus { top: 12px; }
+.workspace-shell { min-height: 100vh; display: grid; grid-template-columns: 246px minmax(0, 1fr); }
+.workspace-sidebar { position: sticky; top: 0; height: 100vh; background: #172329; color: #a6b1b4; padding: 31px 21px 0; display: flex; flex-direction: column; }
+.brand { display: flex; align-items: center; gap: 10px; color: #f7faf8; text-decoration: none; font-weight: 650; font-size: 26px; letter-spacing: -1px; padding: 0 9px; }
+.brand-period { color: #f28a61; }
+.workspace-label { display: flex; align-items: center; gap: 10px; border: 1px solid #344148; border-radius: 9px; padding: 12px 11px; margin-top: 35px; }
+.workspace-avatar { width: 30px; height: 32px; display: grid; place-items: center; border-radius: 6px; background: #33433f; color: #c4d2bd; font-weight: 600; }
+.workspace-label strong { display: block; font-size: 13px; color: #e5ece9; font-weight: 550; }
+.workspace-label div>span { display: block; font-size: 12px; color: #91a19f; margin-top: 3px; }
+.primary-nav { margin-top: 32px; }
+.sidebar-eyebrow { font-size: 11px; letter-spacing: 1.35px; font-weight: 650; color: #7f9096; padding: 0 12px; margin: 0 0 13px; }
+.nav-item { display: flex; align-items: center; gap: 12px; padding: 11px 12px; font-size: 14px; border-radius: 7px; margin-bottom: 5px; color: #b5c0c2; text-decoration: none; }
+.nav-item:hover { background: #243238; color: #fff; }
+.nav-item.active { background: #2b383b; color: #f1c5ac; }
+.nav-active-dot { background: #ef8962; width: 5px; height: 5px; border-radius: 50%; margin-left: auto; }
+.sidebar-planned { margin-top: 34px; }
+.sidebar-planned .sidebar-eyebrow { font-size: 10px; letter-spacing: 1.1px; }
+.planned-nav-item { display: flex; align-items: center; gap: 13px; padding: 12px; font-size: 14px; color: #819195; }
+.planned-nav-item small { margin-left: auto; color: #bf9b7c; font-size: 11px; background: #34372e; border: 1px solid #494538; padding: 1px 6px; border-radius: 4px; }
+.sidebar-bottom { margin-top: auto; padding-top: 50px; }
+.sidebar-note { border: 1px solid #344047; border-radius: 9px; display: flex; align-items: flex-start; gap: 10px; padding: 16px 13px; margin-bottom: 24px; }
+.sidebar-note-icon { color: #e6b28e; padding-top: 2px; }
+.sidebar-note p { font-size: 14px; line-height: 1.75; margin: 0; color: #a1b0b3; }
+.sidebar-note strong { font-weight: 500; color: #dce4df; }
+.sidebar-environment { border-top: 1px solid #344148; padding: 20px 0; display: flex; align-items: center; gap: 7px; font-size: 10px; letter-spacing: 1px; color: #7d9092; }
+.sidebar-environment>span:first-child { width: 5px; height: 5px; background: #7ea48f; border-radius: 50%; }
+.environment-version { margin-left: auto; letter-spacing: 0; font-size: 12px; }
+.workspace-body { min-width: 0; }
+.workspace-topbar { height: 77px; border-bottom: 1px solid #e5e9e4; padding: 0 47px; display: flex; align-items: center; justify-content: space-between; background: #fafbf9; }
+.breadcrumb { display: flex; gap: 13px; align-items: center; font-size: 13px; color: #81908c; }
+.breadcrumb strong { font-weight: 500; color: #344640; }
+.local-badge { border: 1px solid #dde5dc; padding: 6px 10px; font-size: 12px; display: flex; align-items: center; gap: 7px; border-radius: 5px; color: #6b7c71; background: #f2f6ef; }
+.local-badge>span { background: #8fa77c; width: 5px; height: 5px; border-radius: 50%; }
+.workspace-content { max-width: 1440px; margin: 0 auto; padding: 39px 47px 0; }
+.overview-heading { display: flex; justify-content: space-between; gap: 15px; align-items: center; margin-bottom: 30px; }
+.eyebrow { color: #78877e; font-size: 11px; letter-spacing: 1.45px; font-weight: 650; margin: 0 0 10px; }
+h1 { margin: 0; font-size: clamp(24px, 2.3vw, 34px); letter-spacing: -1.1px; font-weight: 550; line-height: 1.25; color: #20362e; }
+.page-intro { margin: 11px 0 0; font-size: 14px; color: #79857e; line-height: 1.7; }
+.version-label { font-size: 11px; color: #788170; white-space: nowrap; letter-spacing: .7px; align-self: flex-start; margin-top: 6px; }
+.welcome-panel { background: #243831; border-radius: 13px; padding: 34px 38px; min-height: 263px; display: flex; overflow: hidden; position: relative; margin-bottom: 24px; color: #fff; }
+.welcome-copy { position: relative; z-index: 1; width: 59%; }
+.hero-label { font-size: 11px; letter-spacing: 1.5px; color: #afc2a8; display: flex; align-items: center; gap: 8px; }
+.status-dot { width: 5px; height: 5px; background: #c0caaa; border-radius: 50%; }
+.welcome-copy h2 { font-size: clamp(26px, 2.7vw, 38px); margin: 19px 0 13px; font-weight: 450; line-height: 1.19; letter-spacing: -1px; color: #f1f1e6; }
+.welcome-copy p { color: #b3bfb3; font-size: 13px; line-height: 1.8; max-width: 315px; margin: 0; }
+.build-plan-link { display: inline-flex; gap: 10px; align-items: center; color: #e9c39f; font-size: 13px; margin-top: 23px; text-decoration: none; }
+.build-plan-link:hover { color: #ffe7c5; transform: translateY(2px); }
+.loom-art { position: absolute; top: 0; bottom: 0; right: 5px; width: 44%; overflow: hidden; }
+.loom-orbit { position: absolute; width: 270px; height: 160px; border: 1px solid #557361; border-radius: 50%; top: 56px; left: 30px; transform: rotate(-35deg); opacity: .55; }
+.orbit-two { transform: rotate(35deg); }
+.orbit-three { transform: rotate(90deg); width: 260px; height: 160px; left: 36px; }
+.loom-tile { display: grid; place-items: center; position: absolute; border: 1px solid #7b8b68; background: #384e40; color: #c3ce9b; border-radius: 15px; width: 69px; height: 69px; box-shadow: 0 12px 40px #15271d40; }
+.tile-one { top: 38px; left: 50px; transform: rotate(-12deg); }
+.tile-two { top: 99px; left: 153px; width: 82px; height: 82px; background: #ed9871; color: #4d4935; border-color: #f8ad87; transform: rotate(9deg); }
+.tile-three { top: 180px; left: 67px; width: 61px; height: 61px; transform: rotate(-6deg); }
+.loom-spark { width: 6px; height: 6px; position: absolute; background: #c1b996; border-radius: 50%; }
+.spark-one { top: 62px; left: 252px; }
+.spark-two { top: 210px; left: 234px; width: 4px; height: 4px; opacity: .6; }
+.art-caption { position: absolute; bottom: 20px; right: 36px; font-size: 10px; letter-spacing: 2px; color: #869a87; }
+.foundation-grid { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); gap: 24px; }
+.foundation-card { border: 1px solid #e1e6df; background: #fff; border-radius: 11px; padding: 25px 26px 0; }
+.section-heading { display: flex; align-items: center; justify-content: space-between; }
+.section-heading .eyebrow { font-size: 10px; margin-bottom: 7px; }
+.section-heading h2, .roadmap-heading h2 { font-size: 20px; font-weight: 550; letter-spacing: -.6px; color: #243c31; margin: 0; }
+.section-icon { display: grid; place-items: center; background: #f3f5ef; color: #77896c; border-radius: 9px; width: 37px; height: 37px; }
+.card-description { font-size: 13px; color: #6d7b70; line-height: 1.8; margin: 12px 0 19px; max-width: 400px; }
+.connection-row { display: flex; gap: 11px; align-items: center; border-top: 1px solid #eef0ec; padding: 17px 0; }
+.connection-icon { display: grid; place-items: center; width: 33px; height: 33px; background: #f6f7f4; border-radius: 7px; color: #7f9181; flex-shrink: 0; }
+.connection-description { min-width: 0; }
+.connection-description h3 { margin: 0; font-size: 13px; font-weight: 550; color: #394b40; }
+.connection-description p { font-size: 11px; color: #72806f; margin: 4px 0 0; line-height: 1.5; }
+.state-badge { margin-left: auto; display: inline-flex; align-items: center; gap: 5px; font-size: 10px; padding: 4px 7px; border-radius: 4px; white-space: nowrap; }
+.state-badge.ready { background: #f0f6ec; color: #6b8a5e; }
+.state-badge.unavailable { background: #fff0e7; color: #ad6a43; }
+.state-badge>span { width: 4px; height: 4px; background: currentColor; border-radius: 50%; }
+.connection-footer { border-top: 1px solid #eef0ec; padding: 15px 0; display: flex; gap: 10px; align-items: center; justify-content: space-between; }
+.connection-footer p { font-size: 10px; color: #728068; margin: 0; line-height: 1.6; }
+.check-button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 11px; color: #657865; border: 1px solid #e1e7da; border-radius: 5px; padding: 7px 9px; cursor: pointer; background: #fff; white-space: nowrap; }
+.check-button:hover { background: #f2f6ec; border-color: #b1c3a4; }
+.check-button:active { transform: translateY(1px); }
+.next-card { background: #f1eee5; border: 1px solid #e7e1d5; border-radius: 11px; padding: 26px; display: flex; flex-direction: column; }
+.next-label { font-size: 10px; color: #9c927b; letter-spacing: 1.1px; display: flex; align-items: center; gap: 7px; }
+.next-label>span { width: 5px; height: 5px; border-radius: 50%; background: #d7a57d; }
+.next-icon { color: #a68c63; margin: 21px 0 11px; }
+.next-card h2 { font-size: 21px; font-weight: 500; color: #534f3f; margin: 0; letter-spacing: -.5px; }
+.next-card p { color: #7d7767; font-size: 13px; line-height: 1.85; margin: 10px 0 22px; }
+.next-footer { margin-top: auto; border-top: 1px solid #dfdbcd; padding-top: 16px; display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 12px; color: #756d56; }
+.planned-pill { border: 1px solid #dcd6c4; font-size: 10px; padding: 3px 7px; border-radius: 4px; color: #7c7257; }
+.roadmap-section { margin-top: 36px; }
+.roadmap-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
+.roadmap-heading .eyebrow { font-size: 10px; margin-bottom: 7px; }
+.roadmap-note { font-size: 11px; color: #74816b; margin-bottom: 3px; }
+.roadmap-list { list-style: none; padding: 0; margin: 0; border: 1px solid #e1e6df; border-radius: 10px; background: #fff; overflow: hidden; }
+.roadmap-item { display: flex; align-items: center; gap: 18px; padding: 17px 23px; border-bottom: 1px solid #eef0eb; }
+.roadmap-item:last-child { border-bottom: 0; }
+.roadmap-number { font-size: 12px; font-variant-numeric: tabular-nums; color: #a9b0a4; }
+.next-number { color: #c68e61; }
+.roadmap-icon { color: #8a9b85; display: grid; place-items: center; background: #f3f6ef; border-radius: 7px; width: 33px; height: 33px; }
+.roadmap-item:first-child .roadmap-icon { background: #fbf0e4; color: #b88759; }
+.roadmap-copy h3 { margin: 0; font-size: 13px; font-weight: 550; color: #45583f; }
+.roadmap-copy p { font-size: 11px; margin: 4px 0 0; color: #74816b; }
+.roadmap-state { margin-left: auto; font-size: 10px; color: #74816b; padding: 4px 8px; border-radius: 4px; }
+.next-state { background: #fbf0e4; color: #b88759; }
+.page-footer { display: flex; justify-content: space-between; gap: 14px; border-top: 1px solid #e4e8df; padding: 23px 0; margin-top: 35px; color: #75826c; font-size: 10px; }
+@media (min-width: 1550px) { .welcome-panel { min-height: 300px; } .loom-art { right: 80px; transform: scale(1.1); transform-origin: center; } }
+@media (max-width: 1150px) { .workspace-shell { grid-template-columns: 215px minmax(0, 1fr); } .workspace-sidebar { padding-left: 15px; padding-right: 15px; } .workspace-topbar { padding: 0 28px; } .workspace-content { padding: 30px 28px 0; } .version-label { display: none; } .foundation-grid { gap: 16px; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); } .foundation-card { padding: 22px 18px 0; } .next-card { padding: 22px 20px; } .connection-footer { flex-wrap: wrap; } .loom-art { right: -35px; width: 46%; } }
+@media (max-width: 900px) { .workspace-shell { grid-template-columns: 190px minmax(0, 1fr); } .workspace-label { padding: 10px 7px; } .workspace-label strong { font-size: 11px; } .workspace-label div>span { font-size: 11px; } .workspace-avatar { width: 26px; } .sidebar-planned .sidebar-eyebrow { font-size: 10px; padding: 0 8px; } .planned-nav-item { padding-left: 9px; gap: 9px; font-size: 13px; } .foundation-grid { grid-template-columns: 1fr; } .next-card { display: grid; grid-template-columns: 40px 1fr; gap: 0 10px; } .next-label { grid-column: 1 / -1; margin-bottom: 17px; } .next-icon { grid-column: 1; grid-row: 2 / 4; margin: 0; } .next-card h2 { font-size: 19px; } .next-card p { margin: 6px 0 16px; } .next-footer { grid-column: 1 / -1; } .welcome-panel { padding: 28px; min-height: 265px; } .welcome-copy { width: 77%; } .loom-art { width: 40%; right: -35px; opacity: .55; } .loom-tile { transform: scale(.7) rotate(-12deg); } .tile-one { left: 0; top: 40px; } .tile-two { left: 68px; } .tile-three { left: 9px; } .loom-orbit { left: -35px; } .art-caption { display: none; } .roadmap-note { display: none; } }
+@media (max-width: 650px) { .workspace-shell { display: block; } .workspace-sidebar { position: static; height: auto; padding: 17px 20px 12px; display: flex; flex-direction: row; align-items: center; justify-content: space-between; gap: 12px; } .brand { padding: 0; font-size: 23px; gap: 8px; } .brand img { width: 30px; height: 30px; } .workspace-label, .sidebar-planned, .sidebar-bottom, .primary-nav>.sidebar-eyebrow { display: none; } .primary-nav { margin: 0; display: flex; gap: 3px; } .nav-item { padding: 8px 9px; margin: 0; font-size: 12px; gap: 5px; } .nav-item>span:first-of-type { width: 15px; height: 15px; } .nav-active-dot { display: none; } .workspace-topbar { height: 55px; padding: 0 21px; } .breadcrumb { font-size: 12px; gap: 8px; } .local-badge { font-size: 10px; padding: 5px 7px; } .workspace-content { padding: 29px 20px 0; } .overview-heading { margin-bottom: 24px; } h1 { font-size: 27px; max-width: 310px; } .eyebrow { font-size: 10px; } .page-intro { font-size: 13px; max-width: 300px; } .welcome-panel { border-radius: 10px; padding: 27px 23px; min-height: 273px; margin-bottom: 18px; } .welcome-copy { width: 90%; } .welcome-copy h2 { font-size: 30px; } .welcome-copy p { max-width: 255px; font-size: 13px; } .loom-art { width: 32%; opacity: .22; right: -10px; pointer-events: none; } .loom-tile { display: none; } .build-plan-link { margin-top: 20px; } .foundation-card { padding: 22px 18px 0; } .connection-row { gap: 8px; } .connection-description h3 { font-size: 12px; } .connection-description p { font-size: 10px; max-width: 145px; } .state-badge { font-size: 10px; padding: 4px 5px; gap: 3px; } .connection-footer { gap: 10px; padding: 13px 0; } .connection-footer p { font-size: 10px; } .check-button { font-size: 10px; padding: 7px; } .roadmap-section { margin-top: 30px; } .roadmap-item { padding: 15px; gap: 11px; } .roadmap-copy h3 { font-size: 13px; } .roadmap-copy p { font-size: 10px; } .roadmap-state { font-size: 10px; padding: 4px; } .page-footer { font-size: 10px; margin-top: 28px; padding: 19px 0; } }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } a, button { transition: none; } }
+
+/* Keep supporting copy legible at every viewport. */
+.connection-description p, .roadmap-copy p { font-size: 12px; }
+.connection-footer p { font-size: 11px; }
+@media (max-width: 650px) {
+  .workspace-sidebar { flex-wrap: wrap; }
+  .connection-description p { font-size: 11px; max-width: 155px; }
+  .connection-description h3 { font-size: 12px; }
+  .connection-footer p { font-size: 10px; }
+  .connection-row { flex-wrap: wrap; }
+  .connection-description { flex: 1; }
+  .connection-icon { width: 29px; }
+  .state-badge { font-size: 10px; }
+  .roadmap-copy p { font-size: 11px; }
+  .page-footer { flex-wrap: wrap; line-height: 1.6; }
+}
+@media (max-width: 380px) {
+  .primary-nav { width: 100%; margin-top: 5px; }
+  .nav-item { flex: 1; justify-content: center; }
+  .connection-description p { max-width: 125px; }
+  .roadmap-item { gap: 8px; padding-left: 12px; padding-right: 12px; }
+  .roadmap-icon { width: 28px; flex-shrink: 0; }
+}

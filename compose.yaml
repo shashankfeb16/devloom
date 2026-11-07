@@ -1,0 +1,47 @@
+name: devloom
+
+services:
+  db:
+    image: postgres:17-alpine@sha256:3540c0362c809df084ffac0ae69fe794515f9de92692f02178bcdce0ef0302ac
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-devloom}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-devloom_local_password}
+      POSTGRES_DB: ${POSTGRES_DB:-devloom_dev}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 3s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+  web:
+    build: .
+    init: true
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_USER: ${POSTGRES_USER:-devloom}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-devloom_local_password}
+      POSTGRES_DB: ${POSTGRES_DB:-devloom_dev}
+      PORT: "4000"
+    ports:
+      - "127.0.0.1:${APP_PORT:-4000}:4000"
+    volumes:
+      - .:/app
+      - deps:/app/deps
+      - build:/app/_build
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "--max-time", "6", "http://localhost:4000/health"]
+      interval: 5s
+      timeout: 8s
+      retries: 20
+      start_period: 90s
+
+volumes:
+  pgdata:
+  deps:
+  build:
