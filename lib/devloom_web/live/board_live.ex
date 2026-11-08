@@ -7,7 +7,7 @@ defmodule DevloomWeb.BoardLive do
   @empty_filters %{"q" => "", "type" => "", "priority" => "", "assignee" => ""}
 
   @impl true
-  def mount(_params, _session, socket) do
+  def mount(params, _session, socket) do
     board = Boards.get_default_board!()
     if connected?(socket), do: Boards.subscribe(board)
 
@@ -24,7 +24,7 @@ defmodule DevloomWeb.BoardLive do
         deleting_column: nil,
         column_delete_form: to_form(%{"destination_id" => ""}, as: :column_delete),
         column_settings_notice: nil,
-        active_view: "board",
+        active_view: if(params["view"] == "list", do: "list", else: "board"),
         filters: @empty_filters,
         filter_form: to_form(@empty_filters, as: :filters),
         item: nil,
@@ -32,7 +32,7 @@ defmodule DevloomWeb.BoardLive do
         editor_notice: nil,
         editor_deleted?: false,
         confirm_delete?: false,
-        help_open?: false
+        help_open?: params["help"] == "1"
       )
 
     {:ok, refresh_board(socket)}

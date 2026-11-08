@@ -24,13 +24,14 @@ import {Socket} from "phoenix"
 import {LiveSocket} from "phoenix_live_view"
 import {hooks as colocatedHooks} from "phoenix-colocated/devloom"
 import {KanbanBoard, FocusDialog} from "./kanban"
+import {ChatScroll, ChatComposer, ChatTimestamp} from "./chat"
 import topbar from "../vendor/topbar"
 
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: {_csrf_token: csrfToken},
-  hooks: {...colocatedHooks, KanbanBoard, FocusDialog},
+  hooks: {...colocatedHooks, KanbanBoard, FocusDialog, ChatScroll, ChatComposer, ChatTimestamp},
 })
 
 // Show progress bar on live navigation and form submits

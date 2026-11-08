@@ -18,6 +18,7 @@ defmodule DevloomWeb.Router do
     pipe_through :browser
 
     live "/", BoardLive
+    live "/chat", ChatLive
   end
 
   scope "/", DevloomWeb do

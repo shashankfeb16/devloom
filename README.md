@@ -2,15 +2,15 @@
 
 Devloom is the working name for a shared developer workspace: one place to organize work and preserve the discussions and knowledge around it.
 
-This is **increment 1: the shared Kanban board**. It builds on the Phoenix, LiveView, PostgreSQL, and health-check foundation with a DevOps-inspired project shell and a persistent, live team board. The feature modules are being built one at a time:
+Devloom builds on Phoenix, LiveView, PostgreSQL, and a health-check foundation with a shared Kanban board and persistent Team chat. The feature modules are being built one at a time:
 
 1. Kanban board — implemented with work item CRUD and live collaboration
 2. Work items and ticket details
 3. Project documentation and the team handbook
-4. Chat
+4. Chat — implemented with persistent messages and live collaboration
 5. Meetings
 
-Documentation, chat, meetings, and richer ticket workflows remain planned. Authentication, invitations, membership permissions, and server hosting are future work. Run this increment locally for development.
+Documentation, meetings, and richer ticket workflows remain planned. Authentication, invitations, membership permissions, and server hosting are future work. Run the application locally for development.
 
 ## Use the Kanban board
 
@@ -34,6 +34,26 @@ Existing boards keep their workflow and cards when the migration runs. Removed d
 Changes persist in PostgreSQL. Open the same board in two browser tabs to see creates, edits, deletes, and moves synchronize without refreshing. Phoenix PubSub publishes changes after transactions commit. Board-level database locks keep simultaneous moves ordered, and version checks prevent an older editor from overwriting a newer change. A stale editor keeps its draft and offers to load the latest version.
 
 This increment has one shared board and no sign-in. All connected sessions can edit it. Assignees are plain names, not user accounts; the context scopes work items, mutations, and subscriptions to a persisted board so a later membership layer can resolve authorized boards before calling it. The development server is published only on localhost by default; users on other computers will need a shared deployment in a later increment.
+
+## Use Team chat
+
+Select **Team chat** in the workspace navigation, or open [http://localhost:4000/chat](http://localhost:4000/chat). On phones, use the navigation below the top bar to switch between the board and chat.
+
+- Enter a display name and write a message, then select **Send**. Enter adds a new line; Ctrl+Enter or Cmd+Enter sends.
+- Messages persist in PostgreSQL and appear in other connected chat tabs without refreshing. Refreshing loads the latest conversation.
+- The latest 50 messages load first. Use **Load older messages** to read previous pages, and return to the latest messages when finished. The visible history is bounded to keep long conversations responsive.
+- Your browser remembers your display name and temporarily keeps your unsent draft. Validation errors preserve the draft so you can correct it. Reconnecting restores the conversation; repeated sends of the same pending message do not create duplicate records.
+
+Chat currently has one shared conversation scoped to the Devloom board. Display names are guest labels, not verified accounts; everyone who can access this local workspace can read and send messages. Private messages, channels, attachments, message editing, and message deletion are not part of this increment.
+
+After pulling this change into an already running development stack, apply the chat migration and build the browser assets:
+
+```sh
+docker compose exec web mix ecto.migrate
+docker compose exec web mix assets.build
+```
+
+Normal application startup also applies pending migrations automatically.
 
 ## Start the application
 
