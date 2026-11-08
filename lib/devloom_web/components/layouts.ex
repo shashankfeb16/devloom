@@ -21,7 +21,7 @@ defmodule DevloomWeb.Layouts do
         <nav class="breadcrumb" aria-label="Breadcrumb">
           <span>Workspace</span><.icon name="hero-chevron-right" class="size-3" />
           <span>Devloom</span><.icon name="hero-chevron-right" class="size-3" />
-          <strong>Boards</strong>
+          <strong>{if @active_view == "chat", do: "Team chat", else: "Boards"}</strong>
         </nav>
         <div class="topbar-right">
           <span
@@ -39,6 +39,24 @@ defmodule DevloomWeb.Layouts do
           /></span>
         </div>
       </header>
+      <nav class="workspace-mobile-nav" aria-label="Mobile workspace navigation">
+        <.link
+          id="mobile-nav-board"
+          navigate={~p"/"}
+          class={@active_view != "chat" && "active"}
+          aria-current={@active_view != "chat" && "page"}
+        >
+          <.icon name="hero-view-columns" class="size-4" />Team board
+        </.link>
+        <.link
+          id="mobile-nav-chat"
+          navigate={~p"/chat"}
+          class={@active_view == "chat" && "active"}
+          aria-current={@active_view == "chat" && "page"}
+        >
+          <.icon name="hero-chat-bubble-left-right" class="size-4" />Team chat
+        </.link>
+      </nav>
       <aside class="workspace-sidebar" aria-label="Workspace navigation">
         <div class="project-switcher">
           <span class="project-avatar">D</span>
@@ -57,6 +75,7 @@ defmodule DevloomWeb.Layouts do
             />
           </div>
           <button
+            :if={@active_view != "chat"}
             id="nav-board"
             class={["nav-item", @active_view == "board" && "active"]}
             phx-click="switch_view"
@@ -65,7 +84,11 @@ defmodule DevloomWeb.Layouts do
           >
             <.icon name="hero-view-columns" class="size-4" /><span>Team board</span>
           </button>
+          <.link :if={@active_view == "chat"} id="nav-board" navigate={~p"/"} class="nav-item">
+            <.icon name="hero-view-columns" class="size-4" /><span>Team board</span>
+          </.link>
           <button
+            :if={@active_view != "chat"}
             id="nav-work-items"
             class={["nav-item", @active_view == "list" && "active"]}
             phx-click="switch_view"
@@ -74,13 +97,26 @@ defmodule DevloomWeb.Layouts do
           >
             <.icon name="hero-clipboard-document-list" class="size-4" /><span>Work items</span>
           </button>
+          <.link
+            :if={@active_view == "chat"}
+            id="nav-work-items"
+            navigate={~p"/?view=list"}
+            class="nav-item"
+          >
+            <.icon name="hero-clipboard-document-list" class="size-4" /><span>Work items</span>
+          </.link>
           <div class="sidebar-rule"></div>
-          <p class="sidebar-eyebrow">YOUR WORKSPACE, GROWING</p>
+          <p class="sidebar-eyebrow">YOUR WORKSPACE</p>
+          <.link
+            id="nav-chat"
+            navigate={~p"/chat"}
+            class={["nav-item", "workspace-chat-link", @active_view == "chat" && "active"]}
+            aria-current={@active_view == "chat" && "page"}
+          >
+            <.icon name="hero-chat-bubble-left-right" class="size-[18px]" /><span>Team chat</span>
+          </.link>
           <div class="planned-nav-item" aria-disabled="true">
             <.icon name="hero-book-open" class="size-[18px]" /><span>Documentation</span><small>Soon</small>
-          </div>
-          <div class="planned-nav-item" aria-disabled="true">
-            <.icon name="hero-chat-bubble-left-right" class="size-[18px]" /><span>Team chat</span><small>Soon</small>
           </div>
           <div class="planned-nav-item" aria-disabled="true">
             <.icon name="hero-video-camera" class="size-[18px]" /><span>Meetings</span><small>Soon</small>
@@ -92,10 +128,23 @@ defmodule DevloomWeb.Layouts do
               Your team's work, in one place.
             </p>
           </div>
-          <button id="board-help" class="sidebar-help" phx-click="show_help"><.icon
+          <button
+            :if={@active_view != "chat"}
+            id="board-help"
+            class="sidebar-help"
+            phx-click="show_help"
+          ><.icon
             name="hero-question-mark-circle"
             class="size-[18px]"
           /><span>Help &amp; shortcuts</span><kbd>?</kbd></button>
+          <.link
+            :if={@active_view == "chat"}
+            id="board-help"
+            navigate={~p"/?help=1"}
+            class="sidebar-help"
+          >
+            <.icon name="hero-question-mark-circle" class="size-[18px]" /><span>Board help</span>
+          </.link>
           <div class="sidebar-identity">
             <span class="identity-icon"><.icon name="hero-user-group" class="size-4" /></span><div>
               <strong>Shared workspace</strong><span>Working together, in real time</span>
