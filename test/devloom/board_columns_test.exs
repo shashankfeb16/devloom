@@ -151,7 +151,14 @@ defmodule Devloom.BoardColumnsTest do
   test "requires a valid destination before deleting a column containing cards", %{board: board} do
     source = column(board, "todo")
     {:ok, item} = Boards.create_work_item(board, %{title: "Do not lose me", status: source.key})
-    other = Repo.insert!(%Board{name: "Other project", slug: "other"})
+
+    other =
+      Repo.insert!(%Board{
+        name: "Other project",
+        slug: "other",
+        workspace_id: Devloom.Workspaces.get_legacy_workspace!().id
+      })
+
     {:ok, foreign} = Boards.create_column(other, %{title: "Foreign destination"})
 
     assert {:error, :destination_required} = Boards.delete_column(board, source)
@@ -208,7 +215,13 @@ defmodule Devloom.BoardColumnsTest do
   end
 
   test "column IDs and card statuses cannot cross board boundaries", %{board: board} do
-    other = Repo.insert!(%Board{name: "Other project", slug: "other"})
+    other =
+      Repo.insert!(%Board{
+        name: "Other project",
+        slug: "other",
+        workspace_id: Devloom.Workspaces.get_legacy_workspace!().id
+      })
+
     {:ok, foreign} = Boards.create_column(other, %{title: "Private workflow"})
     {:ok, item} = Boards.create_work_item(board, %{title: "Board scoped"})
 

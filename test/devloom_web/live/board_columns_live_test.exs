@@ -5,16 +5,16 @@ defmodule DevloomWeb.BoardColumnsLiveTest do
 
   alias Devloom.Boards
 
-  setup do
-    board = Boards.get_default_board!()
-    %{board: board, columns: Boards.list_columns(board)}
+  setup %{conn: conn} do
+    context = setup_workspace(conn)
+    Map.put(context, :columns, Boards.list_columns(context.scope))
   end
 
   test "column settings expose the existing workflow and protect reorder boundaries", %{
     conn: conn,
     columns: columns
   } do
-    {:ok, view, _html} = live(conn, ~p"/")
+    {:ok, view, _html} = live(conn, board_path(conn))
     open_settings(view)
 
     assert has_element?(view, "#column-settings-dialog[role='dialog']")
@@ -38,7 +38,7 @@ defmodule DevloomWeb.BoardColumnsLiveTest do
     board: board,
     columns: original_columns
   } do
-    {:ok, view, _html} = live(conn, ~p"/")
+    {:ok, view, _html} = live(conn, board_path(conn))
     open_settings(view)
 
     view |> form("#column-form", column: %{title: ""}) |> render_submit()
@@ -66,7 +66,7 @@ defmodule DevloomWeb.BoardColumnsLiveTest do
     assert has_element?(view, "#items-#{column.key}[phx-update='stream']")
     assert has_element?(view, "#count-#{column.key}[data-count='0']")
 
-    {:ok, remounted, _html} = live(build_conn(), ~p"/")
+    {:ok, remounted, _html} = live(second_conn(conn), board_path(conn))
     assert Boards.get_column(board, column.id) == column
     assert has_element?(remounted, "#column-#{column.key}")
     assert has_element?(remounted, "#heading-#{column.key}", "Quality assurance")
@@ -79,7 +79,7 @@ defmodule DevloomWeb.BoardColumnsLiveTest do
   } do
     column = hd(columns)
     item = create_item(board, %{status: column.key})
-    {:ok, view, _html} = live(conn, ~p"/")
+    {:ok, view, _html} = live(conn, board_path(conn))
     open_settings(view)
     view |> element("#edit-column-#{column.id}") |> render_click()
 
@@ -108,8 +108,8 @@ defmodule DevloomWeb.BoardColumnsLiveTest do
     board: board,
     columns: [first, second | remaining]
   } do
-    {:ok, first_view, _html} = live(conn, ~p"/")
-    {:ok, second_view, _html} = live(build_conn(), ~p"/")
+    {:ok, first_view, _html} = live(conn, board_path(conn))
+    {:ok, second_view, _html} = live(second_conn(conn), board_path(conn))
     open_settings(first_view)
     first_view |> element("#move-column-right-#{first.id}") |> render_click()
 
@@ -126,7 +126,7 @@ defmodule DevloomWeb.BoardColumnsLiveTest do
              "#kanban-board > #column-#{second.key} + #column-#{first.key}"
            )
 
-    {:ok, remounted, _html} = live(build_conn(), ~p"/")
+    {:ok, remounted, _html} = live(second_conn(conn), board_path(conn))
     assert has_element?(remounted, "#kanban-board > #column-#{second.key} + #column-#{first.key}")
 
     first_view |> element("#move-column-left-#{first.id}") |> render_click()
@@ -144,7 +144,7 @@ defmodule DevloomWeb.BoardColumnsLiveTest do
   } do
     column = create_column(board, %{title: "Testing"})
     existing = create_item(board)
-    {:ok, view, _html} = live(conn, ~p"/")
+    {:ok, view, _html} = live(conn, board_path(conn))
 
     view |> element("#add-item-#{column.key}") |> render_click()
 
@@ -176,8 +176,8 @@ defmodule DevloomWeb.BoardColumnsLiveTest do
     board: board
   } do
     column = create_column(board, %{title: "Optional stage"})
-    {:ok, view, _html} = live(conn, ~p"/")
-    {:ok, other, _html} = live(build_conn(), ~p"/")
+    {:ok, view, _html} = live(conn, board_path(conn))
+    {:ok, other, _html} = live(second_conn(conn), board_path(conn))
     open_settings(view)
 
     view |> element("#delete-column-#{column.id}") |> render_click()
@@ -206,8 +206,8 @@ defmodule DevloomWeb.BoardColumnsLiveTest do
     existing = create_item(board, %{title: "Existing destination item", status: destination.key})
     first = create_item(board, %{title: "First source item", status: source.key})
     second = create_item(board, %{title: "Second source item", status: source.key})
-    {:ok, view, _html} = live(conn, ~p"/")
-    {:ok, other, _html} = live(build_conn(), ~p"/")
+    {:ok, view, _html} = live(conn, board_path(conn))
+    {:ok, other, _html} = live(second_conn(conn), board_path(conn))
     open_settings(view)
     view |> element("#delete-column-#{source.id}") |> render_click()
 
@@ -250,7 +250,7 @@ defmodule DevloomWeb.BoardColumnsLiveTest do
       {:ok, _deleted} = Boards.delete_column(board, Boards.get_column(board, column.id))
     end
 
-    {:ok, view, _html} = live(conn, ~p"/")
+    {:ok, view, _html} = live(conn, board_path(conn))
     open_settings(view)
 
     assert has_element?(view, "#delete-column-#{remaining.id}[disabled]")
@@ -262,7 +262,7 @@ defmodule DevloomWeb.BoardColumnsLiveTest do
     complete = create_column(board, %{title: "Released", color: "green", completed: true})
     first = create_item(board)
     second = create_item(board, %{title: "Another item"})
-    {:ok, view, _html} = live(conn, ~p"/")
+    {:ok, view, _html} = live(conn, board_path(conn))
 
     assert has_element?(view, "#completed-items[data-count='0']")
     render_hook(view, "move_item", %{id: first.id, status: complete.key, before_id: nil})
@@ -284,8 +284,8 @@ defmodule DevloomWeb.BoardColumnsLiveTest do
     conn: conn,
     board: board
   } do
-    {:ok, view, _html} = live(conn, ~p"/")
-    {:ok, other, _html} = live(build_conn(), ~p"/")
+    {:ok, view, _html} = live(conn, board_path(conn))
+    {:ok, other, _html} = live(second_conn(conn), board_path(conn))
     open_settings(view)
     view |> form("#column-form", column: %{title: "Testing", color: "amber"}) |> render_submit()
 
@@ -319,7 +319,7 @@ defmodule DevloomWeb.BoardColumnsLiveTest do
     source = create_column(board, %{title: "Temporary stage"})
     destination = column_named(board, "To do")
     item = create_item(board, %{status: source.key})
-    {:ok, view, _html} = live(conn, ~p"/")
+    {:ok, view, _html} = live(conn, board_path(conn))
     view |> element("#edit-item-#{item.id}") |> render_click()
 
     view

@@ -8,8 +8,8 @@ defmodule DevloomWeb.BoardLive do
 
   @impl true
   def mount(params, _session, socket) do
-    board = Boards.get_default_board!()
-    if connected?(socket), do: Boards.subscribe(board)
+    board = Boards.get_workspace_board!(socket.assigns.current_scope)
+    if connected?(socket), do: Boards.subscribe(socket.assigns.current_scope)
 
     socket =
       socket
@@ -40,14 +40,14 @@ defmodule DevloomWeb.BoardLive do
 
   @impl true
   def handle_event("new_item", params, socket) do
-    columns = Boards.list_columns(socket.assigns.board)
+    columns = Boards.list_columns(socket.assigns.current_scope)
     column = Enum.find(columns, &(&1.key == params["status"])) || List.first(columns)
     item = %WorkItem{status: column.key}
     {:noreply, open_editor(socket, item)}
   end
 
   def handle_event("edit_item", %{"id" => id}, socket) do
-    case Boards.get_work_item(socket.assigns.board, id) do
+    case Boards.get_work_item(socket.assigns.current_scope, id) do
       nil ->
         {:noreply,
          socket
@@ -80,9 +80,9 @@ defmodule DevloomWeb.BoardLive do
   def handle_event("save_item", %{"work_item" => attrs}, socket) do
     result =
       if socket.assigns.item.id do
-        Boards.update_work_item(socket.assigns.board, socket.assigns.item, attrs)
+        Boards.update_work_item(socket.assigns.current_scope, socket.assigns.item, attrs)
       else
-        Boards.create_work_item(socket.assigns.board, attrs)
+        Boards.create_work_item(socket.assigns.current_scope, attrs)
       end
 
     case result do
@@ -116,7 +116,7 @@ defmodule DevloomWeb.BoardLive do
   end
 
   def handle_event("confirm_delete", _params, socket) do
-    case Boards.delete_work_item(socket.assigns.board, socket.assigns.item) do
+    case Boards.delete_work_item(socket.assigns.current_scope, socket.assigns.item) do
       {:ok, _item} ->
         {:noreply,
          socket
@@ -130,14 +130,14 @@ defmodule DevloomWeb.BoardLive do
   end
 
   def handle_event("reload_item", _params, socket) do
-    case Boards.get_work_item(socket.assigns.board, socket.assigns.item.id) do
+    case Boards.get_work_item(socket.assigns.current_scope, socket.assigns.item.id) do
       nil -> {:noreply, editor_error(socket, :not_found)}
       item -> {:noreply, open_editor(socket, item)}
     end
   end
 
   def handle_event("move_item", %{"id" => id, "status" => status} = params, socket) do
-    case Boards.move_work_item(socket.assigns.board, id, status, params["before_id"]) do
+    case Boards.move_work_item(socket.assigns.current_scope, id, status, params["before_id"]) do
       {:ok, _item} ->
         {:reply, %{ok: true}, refresh_board(socket)}
 
@@ -171,7 +171,7 @@ defmodule DevloomWeb.BoardLive do
 
   def handle_event("seed_sample", _params, socket) do
     socket =
-      case Boards.seed_sample_items(socket.assigns.board) do
+      case Boards.seed_sample_items(socket.assigns.current_scope) do
         {:ok, _items} ->
           socket
 
@@ -207,7 +207,7 @@ defmodule DevloomWeb.BoardLive do
   end
 
   def handle_event("edit_column", %{"id" => id}, socket) do
-    case Boards.get_column(socket.assigns.board, id) do
+    case Boards.get_column(socket.assigns.current_scope, id) do
       nil -> {:noreply, settings_error(socket, :not_found)}
       column -> {:noreply, socket |> edit_column_form(column) |> refresh_settings()}
     end
@@ -225,9 +225,9 @@ defmodule DevloomWeb.BoardLive do
   def handle_event("save_column", %{"column" => attrs}, socket) do
     result =
       if socket.assigns.editing_column do
-        Boards.update_column(socket.assigns.board, socket.assigns.editing_column, attrs)
+        Boards.update_column(socket.assigns.current_scope, socket.assigns.editing_column, attrs)
       else
-        Boards.create_column(socket.assigns.board, attrs)
+        Boards.create_column(socket.assigns.current_scope, attrs)
       end
 
     case result do
@@ -243,14 +243,14 @@ defmodule DevloomWeb.BoardLive do
   end
 
   def handle_event("move_column", %{"id" => id, "direction" => direction}, socket) do
-    case Boards.move_column(socket.assigns.board, id, direction) do
+    case Boards.move_column(socket.assigns.current_scope, id, direction) do
       {:ok, _column} -> {:noreply, refresh_board(socket)}
       {:error, reason} -> {:noreply, settings_error(socket, reason)}
     end
   end
 
   def handle_event("delete_column", %{"id" => id}, socket) do
-    case Boards.get_column(socket.assigns.board, id) do
+    case Boards.get_column(socket.assigns.current_scope, id) do
       nil ->
         {:noreply, settings_error(socket, :not_found)}
 
@@ -274,7 +274,7 @@ defmodule DevloomWeb.BoardLive do
 
   def handle_event("confirm_delete_column", %{"column_delete" => params}, socket) do
     case Boards.delete_column(
-           socket.assigns.board,
+           socket.assigns.current_scope,
            socket.assigns.deleting_column,
            params["destination_id"]
          ) do
@@ -284,7 +284,7 @@ defmodule DevloomWeb.BoardLive do
   end
 
   def handle_event("reload_column", _params, socket) do
-    case Boards.get_column(socket.assigns.board, socket.assigns.editing_column.id) do
+    case Boards.get_column(socket.assigns.current_scope, socket.assigns.editing_column.id) do
       nil -> {:noreply, settings_error(socket, :not_found)}
       column -> {:noreply, socket |> edit_column_form(column) |> refresh_settings()}
     end
@@ -296,7 +296,7 @@ defmodule DevloomWeb.BoardLive do
 
     socket =
       if socket.assigns.item && socket.assigns.item.id do
-        case Boards.get_work_item(socket.assigns.board, socket.assigns.item.id) do
+        case Boards.get_work_item(socket.assigns.current_scope, socket.assigns.item.id) do
           nil ->
             editor_error(socket, :not_found)
 
@@ -312,7 +312,7 @@ defmodule DevloomWeb.BoardLive do
 
     socket =
       if socket.assigns.editing_column do
-        case Boards.get_column(socket.assigns.board, socket.assigns.editing_column.id) do
+        case Boards.get_column(socket.assigns.current_scope, socket.assigns.editing_column.id) do
           nil ->
             socket |> assign(column_deleted?: true) |> settings_error(:not_found)
 
@@ -328,7 +328,7 @@ defmodule DevloomWeb.BoardLive do
 
     socket =
       if socket.assigns.deleting_column &&
-           !Boards.get_column(socket.assigns.board, socket.assigns.deleting_column.id) do
+           !Boards.get_column(socket.assigns.current_scope, socket.assigns.deleting_column.id) do
         socket |> assign(deleting_column: nil) |> settings_error(:not_found)
       else
         socket
@@ -336,6 +336,8 @@ defmodule DevloomWeb.BoardLive do
 
     {:noreply, socket}
   end
+
+  def handle_info({:workspace_access_changed, _workspace_id}, socket), do: {:noreply, socket}
 
   defp new_column_form(socket) do
     assign(socket,
@@ -390,9 +392,9 @@ defmodule DevloomWeb.BoardLive do
   end
 
   defp refresh_board(socket) do
-    columns = Boards.list_columns(socket.assigns.board)
-    items = Boards.list_work_items(socket.assigns.board)
-    visible_items = Boards.list_work_items(socket.assigns.board, socket.assigns.filters)
+    columns = Boards.list_columns(socket.assigns.current_scope)
+    items = Boards.list_work_items(socket.assigns.current_scope)
+    visible_items = Boards.list_work_items(socket.assigns.current_scope, socket.assigns.filters)
     counts = Enum.frequencies_by(visible_items, & &1.status)
     completed_keys = for column <- columns, column.completed, do: column.key
     done_count = Enum.count(items, &(&1.status in completed_keys))
@@ -483,7 +485,7 @@ defmodule DevloomWeb.BoardLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app flash={@flash} active_view={@active_view}>
+    <Layouts.app flash={@flash} current_scope={@current_scope} active_view={@active_view}>
       <section class="board-page" aria-labelledby="board-title">
         <header class="page-heading">
           <div>

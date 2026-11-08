@@ -8,8 +8,8 @@ defmodule DevloomWeb.ChatLive do
 
   @impl true
   def mount(_params, _session, socket) do
-    board = Boards.get_default_board!()
-    if connected?(socket), do: Chat.subscribe(board)
+    board = Boards.get_workspace_board!(socket.assigns.current_scope)
+    if connected?(socket), do: Chat.subscribe(socket.assigns.current_scope)
 
     {:ok,
      socket
@@ -17,7 +17,11 @@ defmodule DevloomWeb.ChatLive do
        page_title: "Team chat",
        board: board,
        connected?: connected?(socket),
-       form: message_form(%{"client_ref" => Ecto.UUID.generate()}),
+       form:
+         message_form(%{
+           "sender_name" => socket.assigns.current_scope.user.name,
+           "client_ref" => Ecto.UUID.generate()
+         }),
        history?: false,
        newer_messages?: false
      )
@@ -27,14 +31,22 @@ defmodule DevloomWeb.ChatLive do
 
   @impl true
   def handle_event("validate_message", %{"message" => attrs}, socket) do
-    changeset = attrs |> Chat.change_message() |> Map.put(:action, :validate)
+    changeset =
+      attrs
+      |> Map.put("sender_name", socket.assigns.current_scope.user.name)
+      |> Chat.change_message()
+      |> Map.put(:action, :validate)
+
     {:noreply, assign(socket, form: to_form(changeset, as: :message))}
   end
 
   def handle_event("send_message", %{"message" => attrs}, socket) do
-    attrs = Map.put_new(attrs, "client_ref", socket.assigns.form[:client_ref].value)
+    attrs =
+      attrs
+      |> Map.put("sender_name", socket.assigns.current_scope.user.name)
+      |> Map.put_new("client_ref", socket.assigns.form[:client_ref].value)
 
-    case Chat.create_message(socket.assigns.board, attrs) do
+    case Chat.create_message(socket.assigns.current_scope, attrs) do
       {:ok, message} ->
         {:noreply,
          socket
@@ -70,7 +82,7 @@ defmodule DevloomWeb.ChatLive do
 
       [oldest | _] ->
         {messages, more?} =
-          socket.assigns.board
+          socket.assigns.current_scope
           |> Chat.list_messages(before_id: oldest, limit: @page_size + 1)
           |> page()
 
@@ -102,7 +114,8 @@ defmodule DevloomWeb.ChatLive do
       true ->
         # Fetch the committed range, rather than trusting notification arrival
         # order. The context serializes inserts before assigning their IDs.
-        messages = Chat.list_messages(socket.assigns.board, after_id: latest_id, limit: 200)
+        messages =
+          Chat.list_messages(socket.assigns.current_scope, after_id: latest_id, limit: 200)
 
         if messages != [] && List.last(messages).id < message.id do
           # A notification can overtake more than one catch-up page. Reset to a
@@ -125,8 +138,11 @@ defmodule DevloomWeb.ChatLive do
 
   def handle_info({:message_created, _message}, socket), do: {:noreply, socket}
 
+  def handle_info({:workspace_access_changed, _workspace_id}, socket), do: {:noreply, socket}
+
   defp load_latest(socket) do
-    {messages, more?} = Chat.list_messages(socket.assigns.board, limit: @page_size + 1) |> page()
+    {messages, more?} =
+      Chat.list_messages(socket.assigns.current_scope, limit: @page_size + 1) |> page()
 
     socket
     |> assign(
@@ -148,7 +164,7 @@ defmodule DevloomWeb.ChatLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app flash={@flash} active_view="chat">
+    <Layouts.app flash={@flash} current_scope={@current_scope} active_view="chat">
       <section id="chat-page" class="chat-page" aria-labelledby="chat-title">
         <header class="page-heading chat-page-heading">
           <div>
@@ -163,7 +179,10 @@ defmodule DevloomWeb.ChatLive do
               A little context. A quick question. A place to keep the team in sync.
             </p>
           </div>
-          <.link navigate={~p"/"} class="button button-secondary chat-board-link">
+          <.link
+            navigate={~p"/workspaces/#{@current_scope.workspace.id}/board"}
+            class="button button-secondary chat-board-link"
+          >
             <.icon name="hero-view-columns" class="size-4" /><span>Team board</span>
           </.link>
         </header>
@@ -172,7 +191,7 @@ defmodule DevloomWeb.ChatLive do
           <header class="chat-channel-heading">
             <span class="chat-channel-symbol" aria-hidden="true">#</span>
             <div>
-              <h2>general</h2><p>One conversation for everyone in Devloom</p>
+              <h2>general</h2><p>One conversation for everyone in {@current_scope.workspace.name}</p>
             </div>
             <span class="chat-channel-label"><.icon name="hero-globe-alt" class="size-3.5" />Workspace chat</span>
           </header>
@@ -270,24 +289,14 @@ defmodule DevloomWeb.ChatLive do
             phx-change="validate_message"
             phx-submit="send_message"
             phx-hook="ChatComposer"
-            data-storage-key={"devloom:chat:#{@board.id}"}
+            data-storage-key={"devloom:chat:#{@current_scope.user.id}:#{@board.id}"}
           >
             <.input field={@form[:client_ref]} type="hidden" />
             <div class="chat-composer-identity">
               <.icon name="hero-user-circle" class="size-4" />
-              <.input
-                field={@form[:sender_name]}
-                id="chat-sender-name"
-                type="text"
-                label="Your display name"
-                class="chat-name-input"
-                placeholder="e.g. Alex"
-                maxlength="50"
-                required
-                autocomplete="nickname"
-                phx-debounce="300"
-              />
-              <span class="chat-guest-note">Display names are unverified</span>
+              <span class="chat-signed-identity">Sending as
+              <strong id="chat-sender-name">{@current_scope.user.name}</strong></span>
+              <span class="chat-guest-note">Workspace members only</span>
             </div>
             <div class="chat-composer-message">
               <.input

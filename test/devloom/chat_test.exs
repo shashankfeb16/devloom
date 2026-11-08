@@ -165,7 +165,11 @@ defmodule Devloom.ChatTest do
   end
 
   defp other_board do
-    Repo.insert!(%Board{name: "Other project", slug: Ecto.UUID.generate()})
+    Repo.insert!(%Board{
+      name: "Other project",
+      slug: Ecto.UUID.generate(),
+      workspace_id: Devloom.Workspaces.get_legacy_workspace!().id
+    })
   end
 
   defp insert_messages(board, count) do

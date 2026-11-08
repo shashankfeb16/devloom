@@ -3,30 +3,26 @@ defmodule DevloomWeb.ChatLiveTest do
 
   import Phoenix.LiveViewTest
 
-  alias Devloom.{Boards, Chat, Repo}
-  alias Devloom.Boards.Board
+  alias Devloom.{Chat, Repo}
 
-  setup do
-    %{board: Boards.get_default_board!()}
+  setup %{conn: conn} do
+    setup_workspace(conn)
   end
 
   test "team chat is reachable from the board and starts with an accessible composer", %{
     conn: conn
   } do
-    {:ok, board_view, _html} = live(conn, ~p"/")
+    {:ok, board_view, _html} = live(conn, board_path(conn))
 
-    assert has_element?(board_view, "#nav-chat[href='/chat']")
-    assert has_element?(board_view, "#mobile-nav-chat[href='/chat']")
+    assert has_element?(board_view, "#nav-chat[href='#{chat_path(conn)}']")
+    assert has_element?(board_view, "#mobile-nav-chat[href='#{chat_path(conn)}']")
 
-    {:ok, view, _html} = live(conn, ~p"/chat")
+    {:ok, view, _html} = live(conn, chat_path(conn))
 
     assert has_element?(view, "#chat-page")
     assert has_element?(view, "#chat-messages[phx-update='stream']")
 
-    assert has_element?(
-             view,
-             "#chat-message-form input[name='message[sender_name]'][maxlength='50']"
-           )
+    assert has_element?(view, "#chat-sender-name", "Alex")
 
     assert has_element?(
              view,
@@ -42,7 +38,7 @@ defmodule DevloomWeb.ChatLiveTest do
     conn: conn,
     board: board
   } do
-    {:ok, view, _html} = live(conn, ~p"/chat")
+    {:ok, view, _html} = live(conn, chat_path(conn))
 
     submit_message(view, "Alex", "The release is ready.\nPlease review the checklist.")
 
@@ -52,10 +48,7 @@ defmodule DevloomWeb.ChatLiveTest do
     assert has_element?(view, "#chat-message-#{message.id}", "The release is ready.")
     assert has_element?(view, "#chat-message-#{message.id}", "Please review the checklist.")
 
-    assert has_element?(
-             view,
-             "#chat-message-form input[name='message[sender_name]'][value='Alex']"
-           )
+    assert has_element?(view, "#chat-sender-name", "Alex")
 
     refute has_element?(view, "#chat-message-form textarea[name='message[body]']", message.body)
   end
@@ -64,17 +57,7 @@ defmodule DevloomWeb.ChatLiveTest do
     conn: conn,
     board: board
   } do
-    {:ok, view, _html} = live(conn, ~p"/chat")
-
-    submit_message(view, "", "Keep this draft while I choose a name.")
-
-    assert Chat.list_messages(board) == []
-
-    assert has_element?(
-             view,
-             "#chat-message-form textarea[name='message[body]']",
-             "Keep this draft while I choose a name."
-           )
+    {:ok, view, _html} = live(conn, chat_path(conn))
 
     submit_message(view, "Alex", "   ")
     assert Chat.list_messages(board) == []
@@ -85,10 +68,7 @@ defmodule DevloomWeb.ChatLiveTest do
     assert Chat.list_messages(board) == []
     assert has_element?(view, "#chat-message-form textarea[name='message[body]']", long_body)
 
-    assert has_element?(
-             view,
-             "#chat-message-form input[name='message[sender_name]'][value='Alex']"
-           )
+    assert has_element?(view, "#chat-sender-name", "Alex")
   end
 
   test "a second connected chat receives messages and repeated notifications do not duplicate them",
@@ -96,8 +76,8 @@ defmodule DevloomWeb.ChatLiveTest do
          conn: conn,
          board: board
        } do
-    {:ok, first, _html} = live(conn, ~p"/chat")
-    {:ok, second, _html} = live(build_conn(), ~p"/chat")
+    {:ok, first, _html} = live(conn, chat_path(conn))
+    {:ok, second, _html} = live(second_conn(conn), chat_path(conn))
 
     submit_message(first, "Alex", "Can someone check the deployment?")
 
@@ -121,7 +101,7 @@ defmodule DevloomWeb.ChatLiveTest do
     first = hd(messages)
     sixth = Enum.at(messages, 5)
     latest = List.last(messages)
-    {:ok, view, _html} = live(conn, ~p"/chat")
+    {:ok, view, _html} = live(conn, chat_path(conn))
 
     refute has_element?(view, "#chat-message-#{first.id}")
     assert has_element?(view, "#chat-message-#{sixth.id}")
@@ -155,26 +135,26 @@ defmodule DevloomWeb.ChatLiveTest do
   } do
     body = "<script>alert('hello')</script> & <strong>plain text</strong>"
     message = create_message(board, %{sender_name: "<b>Alex</b>", body: body})
-    {:ok, view, _html} = live(conn, ~p"/chat")
+    {:ok, view, _html} = live(conn, chat_path(conn))
 
     assert has_element?(view, "#chat-message-#{message.id}", body)
     assert has_element?(view, "#chat-message-#{message.id}", "<b>Alex</b>")
     refute has_element?(view, "#chat-message-#{message.id} script")
     refute has_element?(view, "#chat-message-#{message.id} b")
 
-    {:ok, new_session, _html} = live(build_conn(), ~p"/chat")
+    {:ok, new_session, _html} = live(second_conn(conn), chat_path(conn))
     assert has_element?(new_session, "#chat-message-#{message.id}", body)
   end
 
-  test "messages from another board never appear in the shared board's chat", %{conn: conn} do
-    other = Repo.insert!(%Board{name: "Other team", slug: "other-chat-team"})
-    {:ok, view, _html} = live(conn, ~p"/chat")
+  test "messages from another workspace never appear in this chat", %{conn: conn} do
+    other = setup_workspace(build_conn()).board
+    {:ok, view, _html} = live(conn, chat_path(conn))
 
     message = create_message(other, %{body: "A separate team's conversation"})
 
     refute has_element?(view, "#chat-message-#{message.id}")
 
-    {:ok, reloaded, _html} = live(build_conn(), ~p"/chat")
+    {:ok, reloaded, _html} = live(second_conn(conn), chat_path(conn))
     refute has_element?(reloaded, "#chat-message-#{message.id}")
   end
 
@@ -183,7 +163,7 @@ defmodule DevloomWeb.ChatLiveTest do
     board: board
   } do
     messages = for index <- 1..170, do: create_message(board, %{body: "Saved message #{index}"})
-    {:ok, history, _html} = live(conn, ~p"/chat")
+    {:ok, history, _html} = live(conn, chat_path(conn))
 
     for _page <- 1..3 do
       history |> element("#load-older-messages") |> render_click()
@@ -193,7 +173,7 @@ defmodule DevloomWeb.ChatLiveTest do
     assert has_element?(history, "#chat-message-#{hd(messages).id}")
     assert has_element?(history, "#chat-messages > article:nth-of-type(150)")
 
-    {:ok, latest, _html} = live(build_conn(), ~p"/chat")
+    {:ok, latest, _html} = live(second_conn(conn), chat_path(conn))
 
     incoming = for index <- 1..101, do: create_message(board, %{body: "Live update #{index}"})
 
@@ -208,7 +188,7 @@ defmodule DevloomWeb.ChatLiveTest do
     conn: conn,
     board: board
   } do
-    {:ok, view, _html} = live(conn, ~p"/chat")
+    {:ok, view, _html} = live(conn, chat_path(conn))
     earlier = persist_without_broadcast(board, "Earlier committed message")
     later = persist_without_broadcast(board, "Later committed message")
 
@@ -224,7 +204,7 @@ defmodule DevloomWeb.ChatLiveTest do
     conn: conn,
     board: board
   } do
-    {:ok, view, _html} = live(conn, ~p"/chat")
+    {:ok, view, _html} = live(conn, chat_path(conn))
     timestamp = DateTime.utc_now()
 
     rows =
@@ -251,30 +231,30 @@ defmodule DevloomWeb.ChatLiveTest do
   end
 
   test "chat navigation opens the board's list and help views", %{conn: conn} do
-    {:ok, chat, _html} = live(conn, ~p"/chat")
+    {:ok, chat, _html} = live(conn, chat_path(conn))
 
     {:ok, list, _html} =
       chat
       |> element("#nav-work-items")
       |> render_click()
-      |> follow_redirect(conn, ~p"/?view=list")
+      |> follow_redirect(conn, board_path(conn) <> "?view=list")
 
     assert has_element?(list, "#kanban-board[data-view='list']")
 
-    {:ok, chat_again, _html} = live(build_conn(), ~p"/chat")
+    {:ok, chat_again, _html} = live(second_conn(conn), chat_path(conn))
 
     {:ok, board_help, _html} =
       chat_again
       |> element("#board-help")
       |> render_click()
-      |> follow_redirect(conn, ~p"/?help=1")
+      |> follow_redirect(conn, board_path(conn) <> "?help=1")
 
     assert has_element?(board_help, "#board-guide[role='dialog']")
   end
 
-  defp submit_message(view, sender_name, body) do
+  defp submit_message(view, _sender_name, body) do
     view
-    |> form("#chat-message-form", message: %{sender_name: sender_name, body: body})
+    |> form("#chat-message-form", message: %{body: body})
     |> render_submit()
   end
 

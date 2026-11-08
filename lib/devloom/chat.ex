@@ -3,18 +3,24 @@ defmodule Devloom.Chat do
   Persistent team conversation scoped to a board.
 
   Display names are guest-provided labels, not verified account identities.
-  A future membership layer must resolve an authorized board before calling
-  this context. Client references make retries safe without duplicating posts.
+  Account-scope overloads recheck workspace membership and bind senders to
+  their signed-in account. Board overloads are trusted internal primitives. Client references make retries safe without duplicating posts.
   """
   import Ecto.Query
 
   alias Devloom.Boards.Board
+  alias Devloom.Accounts.Scope
+  alias Devloom.Boards
   alias Devloom.Chat.Message
   alias Devloom.Repo
 
   @default_limit 50
   @maximum_limit 200
   @maximum_id 9_223_372_036_854_775_807
+
+  def subscribe(%Scope{} = scope) do
+    with {:ok, board} <- scoped_board(scope), do: subscribe(board)
+  end
 
   def subscribe(%Board{id: id}) do
     Phoenix.PubSub.subscribe(Devloom.PubSub, topic(id))
@@ -31,7 +37,16 @@ defmodule Devloom.Chat do
   return an empty page. Cursors may be positive integer IDs or decimal strings;
   `after_id: 0` starts catch-up from the beginning of the conversation.
   """
-  def list_messages(%Board{id: board_id}, opts \\ []) do
+  def list_messages(scope_or_board, opts \\ [])
+
+  def list_messages(%Scope{} = scope, opts) do
+    case scoped_board(scope) do
+      {:ok, board} -> list_messages(board, opts)
+      _ -> []
+    end
+  end
+
+  def list_messages(%Board{id: board_id}, opts) do
     query = from message in Message, where: message.board_id == ^board_id
     limit = page_limit(Keyword.get(opts, :limit, @default_limit))
 
@@ -55,21 +70,37 @@ defmodule Devloom.Chat do
   end
 
   @doc "Creates a message and publishes it after its insert transaction commits."
-  def create_message(%Board{} = board, attrs) do
-    changeset = Message.changeset(%Message{board_id: board.id}, attrs)
+  def create_message(%Scope{} = scope, attrs) do
+    with {:ok, board} <- scoped_board(scope) do
+      sender_name = scope.user.name |> String.codepoints() |> Enum.take(50) |> Enum.join()
+
+      safe_attrs = %{
+        "sender_name" => sender_name,
+        "body" => Map.get(attrs, "body", Map.get(attrs, :body)),
+        "client_ref" => Map.get(attrs, "client_ref", Map.get(attrs, :client_ref))
+      }
+
+      create_board_message(board, safe_attrs, scope.user.id)
+    end
+  end
+
+  def create_message(%Board{} = board, attrs), do: create_board_message(board, attrs, nil)
+
+  defp create_board_message(board, attrs, user_id) do
+    changeset = Message.changeset(%Message{board_id: board.id, user_id: user_id}, attrs)
 
     if changeset.valid? do
       result =
         Repo.transaction(fn ->
           # Allocate IDs only after acquiring this lock, so ID order also
           # reflects commit order and an after_id cursor cannot miss a post.
-          Repo.one(from persisted in Board, where: persisted.id == ^board.id, lock: "FOR UPDATE") ||
-            Repo.rollback(:not_found)
+          Boards.lock_authorized_board!(board)
 
           client_ref = Ecto.Changeset.get_field(changeset, :client_ref)
 
           case Repo.get_by(Message, board_id: board.id, client_ref: client_ref) do
             %Message{} = message ->
+              if user_id && message.user_id != user_id, do: Repo.rollback(:invalid_client_ref)
               {message, false}
 
             nil ->
@@ -93,6 +124,14 @@ defmodule Devloom.Chat do
       end
     else
       {:error, %{changeset | action: :insert}}
+    end
+  end
+
+  defp scoped_board(scope) do
+    try do
+      {:ok, Boards.get_workspace_board!(scope)}
+    rescue
+      Ecto.NoResultsError -> {:error, :unauthorized}
     end
   end
 

@@ -1,5 +1,7 @@
 @import "tailwindcss" source(none);
 @import "phoenix-colocated/devloom/colocated.css";
+@import "./accounts.css";
+@import "./workspaces.css";
 @source "../css";
 @source "../js";
 @source "../../lib/devloom_web";
@@ -410,4 +412,9 @@ h1 { font-size: 29px; line-height: 1.2; font-weight: 650; letter-spacing: -.9px;
   #chat-composer-hint { display: none; }
   .chat-composer-footnote { font-size: 7px; margin-top: 8px; }
   .chat-history-notice { font-size: 9px; gap: 9px; padding: 9px 12px; }
+}
+
+@media (max-width: 700px) {
+  .workspace-mobile-nav { gap: 6px; justify-content: space-between; padding: 0 14px; }
+  .workspace-mobile-nav a { gap: 5px; font-size: 10px; }
 }

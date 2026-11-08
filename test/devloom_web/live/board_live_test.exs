@@ -5,12 +5,12 @@ defmodule DevloomWeb.BoardLiveTest do
 
   alias Devloom.Boards
 
-  setup do
-    %{board: Boards.get_default_board!()}
+  setup %{conn: conn} do
+    setup_workspace(conn)
   end
 
   test "an empty workspace has every workflow column and an explicit sample action", %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/")
+    {:ok, view, _html} = live(conn, board_path(conn))
 
     assert has_element?(view, "#kanban-board[data-view='board']")
     assert has_element?(view, "#empty-board")
@@ -28,7 +28,7 @@ defmodule DevloomWeb.BoardLiveTest do
     conn: conn,
     board: board
   } do
-    {:ok, view, _html} = live(conn, ~p"/")
+    {:ok, view, _html} = live(conn, board_path(conn))
 
     view |> element("#new-work-item") |> render_click()
     assert has_element?(view, "#work-item-dialog[role='dialog']")
@@ -71,7 +71,7 @@ defmodule DevloomWeb.BoardLiveTest do
   end
 
   test "adding from a column prefills its status and closing discards a draft", %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/")
+    {:ok, view, _html} = live(conn, board_path(conn))
 
     view |> element("#add-item-in_review") |> render_click()
 
@@ -87,7 +87,7 @@ defmodule DevloomWeb.BoardLiveTest do
 
   test "editing updates the item and its streamed column", %{conn: conn, board: board} do
     item = create_item(board, %{title: "Original title", labels: ["Backend"]})
-    {:ok, view, _html} = live(conn, ~p"/")
+    {:ok, view, _html} = live(conn, board_path(conn))
 
     view |> element("#edit-item-#{item.id}") |> render_click()
 
@@ -113,7 +113,7 @@ defmodule DevloomWeb.BoardLiveTest do
 
   test "deletion requires confirmation and can be cancelled", %{conn: conn, board: board} do
     item = create_item(board)
-    {:ok, view, _html} = live(conn, ~p"/")
+    {:ok, view, _html} = live(conn, board_path(conn))
 
     view |> element("#edit-item-#{item.id}") |> render_click()
     view |> element("#delete-work-item") |> render_click()
@@ -138,8 +138,8 @@ defmodule DevloomWeb.BoardLiveTest do
     board: board
   } do
     item = create_item(board)
-    {:ok, first, _html} = live(conn, ~p"/")
-    {:ok, second, _html} = live(build_conn(), ~p"/")
+    {:ok, first, _html} = live(conn, board_path(conn))
+    {:ok, second, _html} = live(second_conn(conn), board_path(conn))
 
     render_hook(first, "move_item", %{id: item.id, status: "done", before_id: nil})
 
@@ -157,7 +157,7 @@ defmodule DevloomWeb.BoardLiveTest do
     first = create_item(board, %{title: "First"})
     second = create_item(board, %{title: "Second"})
     third = create_item(board, %{title: "Third"})
-    {:ok, view, _html} = live(conn, ~p"/")
+    {:ok, view, _html} = live(conn, board_path(conn))
 
     render_hook(view, "move_item", %{id: third.id, status: "backlog", before_id: first.id})
 
@@ -171,8 +171,8 @@ defmodule DevloomWeb.BoardLiveTest do
   end
 
   test "create, update and delete propagate to another open board", %{conn: conn, board: board} do
-    {:ok, first, _html} = live(conn, ~p"/")
-    {:ok, second, _html} = live(build_conn(), ~p"/")
+    {:ok, first, _html} = live(conn, board_path(conn))
+    {:ok, second, _html} = live(second_conn(conn), board_path(conn))
 
     first |> element("#new-work-item") |> render_click()
     first |> form("#work-item-form", work_item: %{title: "Shared work"}) |> render_submit()
@@ -203,7 +203,7 @@ defmodule DevloomWeb.BoardLiveTest do
   } do
     matching = create_item(board, %{title: "Fix keyboard focus", type: :bug, priority: :high})
     other = create_item(board, %{title: "Document the API", type: :task, priority: :low})
-    {:ok, view, _html} = live(conn, ~p"/")
+    {:ok, view, _html} = live(conn, board_path(conn))
 
     view
     |> form("#board-filters", filters: %{q: "keyboard", type: "bug", priority: "high"})
@@ -224,7 +224,7 @@ defmodule DevloomWeb.BoardLiveTest do
   test "the unassigned filter excludes assigned work", %{conn: conn, board: board} do
     unassigned = create_item(board)
     assigned = create_item(board, %{assignee: "Alex"})
-    {:ok, view, _html} = live(conn, ~p"/")
+    {:ok, view, _html} = live(conn, board_path(conn))
 
     view |> form("#board-filters", filters: %{assignee: "unassigned"}) |> render_change()
 
@@ -237,7 +237,7 @@ defmodule DevloomWeb.BoardLiveTest do
     board: board
   } do
     item = create_item(board)
-    {:ok, view, _html} = live(conn, ~p"/")
+    {:ok, view, _html} = live(conn, board_path(conn))
     view |> element("#edit-item-#{item.id}") |> render_click()
 
     {:ok, _deleted} = Boards.delete_work_item(board, item)
@@ -255,8 +255,8 @@ defmodule DevloomWeb.BoardLiveTest do
     board: board
   } do
     item = create_item(board)
-    {:ok, first, _html} = live(conn, ~p"/")
-    {:ok, second, _html} = live(build_conn(), ~p"/")
+    {:ok, first, _html} = live(conn, board_path(conn))
+    {:ok, second, _html} = live(second_conn(conn), board_path(conn))
 
     first |> element("#edit-item-#{item.id}") |> render_click()
     second |> element("#edit-item-#{item.id}") |> render_click()
@@ -276,7 +276,7 @@ defmodule DevloomWeb.BoardLiveTest do
 
   test "board and list views show the same persistent items", %{conn: conn, board: board} do
     item = create_item(board)
-    {:ok, view, _html} = live(conn, ~p"/")
+    {:ok, view, _html} = live(conn, board_path(conn))
 
     view |> element("#view-list") |> render_click()
     assert has_element?(view, "#kanban-board[data-view='list']")
@@ -291,7 +291,7 @@ defmodule DevloomWeb.BoardLiveTest do
     conn: conn,
     board: board
   } do
-    {:ok, view, _html} = live(conn, ~p"/")
+    {:ok, view, _html} = live(conn, board_path(conn))
     assert Boards.list_work_items(board) == []
 
     view |> element("#load-sample-items") |> render_click()
@@ -299,7 +299,7 @@ defmodule DevloomWeb.BoardLiveTest do
     assert length(items) > 0
     refute has_element?(view, "#empty-board")
 
-    {:ok, refreshed, _html} = live(build_conn(), ~p"/")
+    {:ok, refreshed, _html} = live(second_conn(conn), board_path(conn))
     assert Boards.list_work_items(board) == items
 
     for item <- items do

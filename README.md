@@ -2,15 +2,23 @@
 
 Devloom is the working name for a shared developer workspace: one place to organize work and preserve the discussions and knowledge around it.
 
-Devloom builds on Phoenix, LiveView, PostgreSQL, and a health-check foundation with a shared Kanban board and persistent Team chat. The feature modules are being built one at a time:
+Devloom uses Phoenix, LiveView, and PostgreSQL for accounts, separate team workspaces, Kanban boards, and persistent team chat.
 
-1. Kanban board — implemented with work item CRUD and live collaboration
-2. Work items and ticket details
-3. Project documentation and the team handbook
-4. Chat — implemented with persistent messages and live collaboration
-5. Meetings
+## Accounts and workspaces
 
-Documentation, meetings, and richer ticket workflows remain planned. Authentication, invitations, membership permissions, and server hosting are future work. Run the application locally for development.
+Open [http://localhost:4000](http://localhost:4000). Create an account with your name, email, and password, or sign in to an existing account. Passwords require at least 12 characters and are hashed with bcrypt. Sessions use expiring, revocable database tokens; signing out ends that browser session and disconnects its open live views.
+
+After signing in, **Your workspaces** lists only workspaces you belong to. Create a workspace for each team or project, and use the workspace switcher to move between them. Each workspace has its own members, board, work items, workflow configuration, and conversation. Creating a workspace makes you its owner and starts it with an empty board and chat.
+
+**Upgrading the existing shared board:** the migration preserves existing boards, tasks, columns, and messages in a Devloom workspace. The first account created through the sign-up page becomes its owner. Later accounts access it by invitation. Existing guest messages keep their original display names; new messages record the signed-in account. The migration does not erase or populate work items.
+
+### Invite and manage members
+
+Open a workspace and select **Members & invites**. Owners can enter an email address to create an invitation link, copy it, and share it with the intended teammate. The teammate signs in or creates an account using that email and opens the link to join. Invitations expire after seven days, can be used once, and can be revoked. Creating a replacement invitation invalidates the previous link for that email.
+
+Members can use the workspace board and chat and see the team directory. Owners can invite or remove members. Removing someone ends their access to that workspace, including already-open board and chat sessions; their existing work and messages remain. Owners cannot remove themselves.
+
+Invitation links are shown once to the owner and only token hashes are stored in the database. Email delivery is not configured: share the generated links yourself. Email verification, password recovery, workspace deletion, and ownership transfer are not implemented in this increment.
 
 ## Use the Kanban board
 
@@ -29,28 +37,30 @@ Select **Configure board** beside **New work item** to add columns, edit their n
 
 To remove a column, select its trash button and confirm. A column with work items requires a destination: its cards move to the end of the selected column in their existing order. Deleting a column never deletes its work items, and the final column cannot be removed. Renaming keeps cards in place. Configuration survives reloads and synchronizes with other open sessions, including work-item status menus and drag targets.
 
-Existing boards keep their workflow and cards when the migration runs. Removed default columns are never recreated on refresh. Column configuration is available to all sessions for now; an admin permission check can be added when accounts and roles are implemented.
+Existing boards keep their workflow and cards when the migration runs. Removed default columns are never recreated on refresh. Column configuration is available to members of that workspace.
 
 Changes persist in PostgreSQL. Open the same board in two browser tabs to see creates, edits, deletes, and moves synchronize without refreshing. Phoenix PubSub publishes changes after transactions commit. Board-level database locks keep simultaneous moves ordered, and version checks prevent an older editor from overwriting a newer change. A stale editor keeps its draft and offers to load the latest version.
 
-This increment has one shared board and no sign-in. All connected sessions can edit it. Assignees are plain names, not user accounts; the context scopes work items, mutations, and subscriptions to a persisted board so a later membership layer can resolve authorized boards before calling it. The development server is published only on localhost by default; users on other computers will need a shared deployment in a later increment.
+All board reads, edits, and live subscriptions resolve the signed-in user's current workspace membership. Assignees remain editable text names. The development server is published only on localhost by default; teammates on other computers need a shared deployment.
 
 ## Use Team chat
 
-Select **Team chat** in the workspace navigation, or open [http://localhost:4000/chat](http://localhost:4000/chat). On phones, use the navigation below the top bar to switch between the board and chat.
+Open a workspace and select **Team chat**. On phones, use the navigation below the top bar to switch between workspaces, the board, chat, and members.
 
-- Enter a display name and write a message, then select **Send**. Enter adds a new line; Ctrl+Enter or Cmd+Enter sends.
+- Write a message and select **Send message**. Your signed-in account supplies the author name. Enter adds a new line; Ctrl+Enter or Cmd+Enter sends.
 - Messages persist in PostgreSQL and appear in other connected chat tabs without refreshing. Refreshing loads the latest conversation.
 - The latest 50 messages load first. Use **Load older messages** to read previous pages, and return to the latest messages when finished. The visible history is bounded to keep long conversations responsive.
-- Your browser remembers your display name and temporarily keeps your unsent draft. Validation errors preserve the draft so you can correct it. Reconnecting restores the conversation; repeated sends of the same pending message do not create duplicate records.
+- Your browser temporarily keeps your unsent draft separately for each account and workspace. Validation errors preserve the draft so you can correct it. Reconnecting restores the conversation; repeated sends of the same pending message do not create duplicate records.
 
-Chat currently has one shared conversation scoped to the Devloom board. Display names are guest labels, not verified accounts; everyone who can access this local workspace can read and send messages. Private messages, channels, attachments, message editing, and message deletion are not part of this increment.
+Each workspace has one conversation accessible only to its members. Private messages, channels, attachments, message editing, and message deletion are not part of this increment.
 
-After pulling this change into an already running development stack, apply the chat migration and build the browser assets:
+After pulling this change into an already running development stack, install the new password-hashing dependency, apply migrations, and build the browser assets:
 
 ```sh
+docker compose exec web mix deps.get
 docker compose exec web mix ecto.migrate
 docker compose exec web mix assets.build
+docker compose restart web
 ```
 
 Normal application startup also applies pending migrations automatically.

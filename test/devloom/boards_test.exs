@@ -261,7 +261,12 @@ defmodule Devloom.BoardsTest do
   end
 
   defp other_board do
-    board = Repo.insert!(%Board{name: "Other project", slug: "other"})
+    board =
+      Repo.insert!(%Board{
+        name: "Other project",
+        slug: "other",
+        workspace_id: Devloom.Workspaces.get_legacy_workspace!().id
+      })
 
     WorkItem.statuses()
     |> Enum.with_index()

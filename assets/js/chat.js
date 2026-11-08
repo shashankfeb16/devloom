@@ -47,21 +47,17 @@ export const ChatScroll = {
 
 export const ChatComposer = {
   mounted() {
-    this.nameInput = this.el.querySelector("[name='message[sender_name]']")
     this.bodyInput = this.el.querySelector("[name='message[body]']")
     this.refInput = this.el.querySelector("[name='message[client_ref]']")
     this.key = this.el.dataset.storageKey
-    this.nameKey = `${this.key}:name`
 
     try {
-      const name = localStorage.getItem(this.nameKey)
       const draft = JSON.parse(sessionStorage.getItem(this.key) || "null")
-      if (name && !this.nameInput.value) this.nameInput.value = name
       if (draft?.body) {
         this.bodyInput.value = draft.body
         if (draft.clientRef) this.refInput.value = draft.clientRef
       }
-      if (name || draft?.body) this.nameInput.dispatchEvent(new Event("input", {bubbles: true}))
+      if (draft?.body) this.bodyInput.dispatchEvent(new Event("input", {bubbles: true}))
     } catch (_) { /* Chat still works when browser storage is unavailable. */ }
 
     this.onInput = () => this.saveDraft()
@@ -83,7 +79,6 @@ export const ChatComposer = {
 
   saveDraft() {
     try {
-      localStorage.setItem(this.nameKey, this.nameInput.value)
       sessionStorage.setItem(this.key, JSON.stringify({body: this.bodyInput.value, clientRef: this.refInput.value}))
     } catch (_) { /* Storage is optional. LiveView also recovers the form. */ }
   },

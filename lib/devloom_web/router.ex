@@ -1,6 +1,8 @@
 defmodule DevloomWeb.Router do
   use DevloomWeb, :router
 
+  import DevloomWeb.UserAuth
+
   pipeline :browser do
     plug :accepts, ["html"]
     plug :fetch_session
@@ -8,6 +10,7 @@ defmodule DevloomWeb.Router do
     plug :put_root_layout, html: {DevloomWeb.Layouts, :root}
     plug :protect_from_forgery
     plug :put_secure_browser_headers
+    plug :fetch_current_scope_for_user
   end
 
   pipeline :api do
@@ -17,8 +20,37 @@ defmodule DevloomWeb.Router do
   scope "/", DevloomWeb do
     pipe_through :browser
 
-    live "/", BoardLive
-    live "/chat", ChatLive
+    get "/", HomeController, :index
+    get "/chat", HomeController, :index
+    get "/users/register", RegistrationController, :new
+    post "/users/register", RegistrationController, :create
+    get "/users/log_in", SessionController, :new
+    post "/users/log_in", SessionController, :create
+    delete "/users/log_out", SessionController, :delete
+
+    live_session :invitation,
+      on_mount: [{DevloomWeb.UserAuth, :mount_current_scope}] do
+      live "/invitations/:token", InvitationLive
+    end
+  end
+
+  scope "/", DevloomWeb do
+    pipe_through [:browser, :require_authenticated_user]
+
+    live_session :authenticated,
+      on_mount: [{DevloomWeb.UserAuth, :ensure_authenticated}] do
+      live "/workspaces", WorkspaceLive
+    end
+
+    live_session :workspace,
+      on_mount: [
+        {DevloomWeb.UserAuth, :ensure_authenticated},
+        {DevloomWeb.WorkspaceAuth, :ensure_member}
+      ] do
+      live "/workspaces/:workspace_id/board", BoardLive
+      live "/workspaces/:workspace_id/chat", ChatLive
+      live "/workspaces/:workspace_id/members", WorkspaceMembersLive
+    end
   end
 
   scope "/", DevloomWeb do

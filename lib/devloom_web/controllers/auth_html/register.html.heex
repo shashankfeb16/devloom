@@ -1,0 +1,68 @@
+<Layouts.app flash={@flash} current_scope={@current_scope}>
+  <section class="auth-card" aria-labelledby="auth-title">
+    <span class="auth-eyebrow">YOUR TEAM'S NEXT CHAPTER</span>
+    <h1 id="auth-title" class="auth-title">Make room for better work.</h1>
+    <p class="auth-subtitle">
+      Create your account to organize projects, share conversations, and build with your team.
+    </p>
+
+    <.form
+      for={@form}
+      id="registration-form"
+      action={~p"/users/register"}
+      method="post"
+      class="auth-form"
+    >
+      <input :if={@return_to} type="hidden" name="return_to" value={@return_to} />
+      <.input
+        field={@form[:name]}
+        label="Your name"
+        class="form-input"
+        autocomplete="name"
+        maxlength="50"
+        required
+      />
+      <.input
+        field={@form[:email]}
+        type="email"
+        label="Email address"
+        class="form-input"
+        autocomplete="email"
+        maxlength="160"
+        required
+      />
+      <.input
+        field={@form[:password]}
+        type="password"
+        value=""
+        label="Password"
+        class="form-input"
+        autocomplete="new-password"
+        minlength="12"
+        maxlength="72"
+        required
+      />
+      <p class="auth-field-hint">Use at least 12 characters. Long, unique passwords work best.</p>
+      <.input
+        field={@form[:password_confirmation]}
+        type="password"
+        value=""
+        label="Confirm password"
+        class="form-input"
+        autocomplete="new-password"
+        minlength="12"
+        maxlength="72"
+        required
+      />
+      <button id="create-account" type="submit" class="button button-primary">Create account<.icon
+        name="hero-arrow-right"
+        class="size-4"
+      /></button>
+    </.form>
+
+    <p class="auth-footer">
+      Already have an account?
+      <.link href={~p"/users/log_in?#{if @return_to, do: [return_to: @return_to], else: []}"}>Sign in</.link>
+    </p>
+  </section>
+</Layouts.app>

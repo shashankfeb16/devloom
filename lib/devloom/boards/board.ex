@@ -5,6 +5,8 @@ defmodule Devloom.Boards.Board do
   schema "boards" do
     field :name, :string
     field :slug, :string
+    belongs_to :workspace, Devloom.Workspaces.Workspace
+    field :authorized_user_id, :integer, virtual: true
 
     has_many :work_items, Devloom.Boards.WorkItem
     has_many :columns, Devloom.Boards.Column
