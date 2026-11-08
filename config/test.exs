@@ -1,5 +1,8 @@
 import Config
 
+# Password hashing remains real while keeping the test suite fast.
+config :bcrypt_elixir, log_rounds: 4
+
 # Configure your database
 #
 # The MIX_TEST_PARTITION environment variable can be used

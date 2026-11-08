@@ -35,4 +35,33 @@ defmodule DevloomWeb.ConnCase do
     Devloom.DataCase.setup_sandbox(tags)
     {:ok, conn: Phoenix.ConnTest.build_conn()}
   end
+
+  def log_in_user(conn, user) do
+    token = Devloom.Accounts.generate_user_session_token(user)
+
+    conn
+    |> Phoenix.ConnTest.init_test_session(%{})
+    |> Plug.Conn.put_session(:user_token, token)
+  end
+
+  def setup_workspace(conn) do
+    user = Devloom.AccountsFixtures.user_fixture(%{name: "Alex"})
+    scope = Devloom.Accounts.Scope.for_user(user)
+    {:ok, workspace} = Devloom.Workspaces.create_workspace(scope, %{name: "Test workspace"})
+    {:ok, scope} = Devloom.Workspaces.fetch_scope(scope, workspace.id)
+
+    %{
+      conn: conn |> log_in_user(user) |> Plug.Conn.assign(:test_scope, scope),
+      user: user,
+      scope: scope,
+      workspace: workspace,
+      board: Devloom.Boards.get_workspace_board!(scope)
+    }
+  end
+
+  def second_conn(conn),
+    do: log_in_user(Phoenix.ConnTest.build_conn(), conn.assigns.test_scope.user)
+
+  def board_path(conn), do: "/workspaces/#{conn.assigns.test_scope.workspace.id}/board"
+  def chat_path(conn), do: "/workspaces/#{conn.assigns.test_scope.workspace.id}/chat"
 end

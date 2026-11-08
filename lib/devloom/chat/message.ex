@@ -9,6 +9,7 @@ defmodule Devloom.Chat.Message do
     field :client_ref, Ecto.UUID
 
     belongs_to :board, Devloom.Boards.Board
+    belongs_to :user, Devloom.Accounts.User
 
     timestamps(type: :utc_datetime_usec, updated_at: false)
   end

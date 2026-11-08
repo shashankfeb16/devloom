@@ -4,18 +4,24 @@ defmodule Devloom.Boards do
 
   Board row locks serialize edits and reorders so concurrent sessions cannot
   corrupt a column's ordering. Notifications are published after commit.
-  Authentication can later resolve a member's board before calling this context.
+  Web callers use account scopes, which recheck persisted workspace membership.
+  Board-struct overloads are internal primitives for migrations and trusted jobs.
   """
   import Ecto.Query
 
   alias Devloom.Boards.{Board, Column, WorkItem}
   alias Devloom.Repo
+  alias Devloom.Accounts.Scope
+  alias Devloom.Workspaces
+  alias Devloom.Workspaces.{Membership, Workspace}
 
   def get_default_board! do
+    workspace = Workspaces.get_legacy_workspace!()
+
     {:ok, board} =
       Repo.transaction(fn ->
         board =
-          Repo.insert!(%Board{name: "Devloom", slug: "development"},
+          Repo.insert!(%Board{name: "Devloom", slug: "development", workspace_id: workspace.id},
             on_conflict: :nothing,
             conflict_target: :slug
           )
@@ -34,12 +40,94 @@ defmodule Devloom.Boards do
     board
   end
 
+  @doc "Resolves a board only through current persisted workspace membership."
+  def get_workspace_board!(%Scope{} = scope) do
+    case authorized_board(scope) do
+      {:ok, board} -> board
+      _ -> raise Ecto.NoResultsError, queryable: Board
+    end
+  end
+
+  @doc false
+  def create_workspace_board!(%Workspace{} = workspace) do
+    existing =
+      Repo.one(
+        from board in Board,
+          where: board.workspace_id == ^workspace.id,
+          order_by: [asc: board.id],
+          limit: 1
+      )
+
+    existing || begin_workspace_board(workspace)
+  end
+
+  defp begin_workspace_board(workspace) do
+    board =
+      Repo.insert!(%Board{
+        name: workspace.name,
+        slug: "board-" <> Ecto.UUID.generate(),
+        workspace_id: workspace.id
+      })
+
+    Enum.each(default_columns(), fn attrs ->
+      Repo.insert!(struct!(Column, Map.put(attrs, :board_id, board.id)))
+    end)
+
+    board
+  end
+
+  defp authorized_board(%Scope{workspace: %Workspace{id: id}} = scope) do
+    if Workspaces.authorized_scope?(scope) do
+      board =
+        Repo.one(
+          from board in Board,
+            where: board.workspace_id == ^id,
+            order_by: [asc: board.id],
+            limit: 1
+        )
+
+      if board do
+        {:ok, %{board | authorized_user_id: scope.user.id}}
+      else
+        Repo.transaction(fn ->
+          workspace =
+            Repo.one(
+              from workspace in Workspace,
+                where: workspace.id == ^id,
+                lock: "FOR UPDATE"
+            ) || Repo.rollback(:unauthorized)
+
+          if !Workspaces.authorized_scope?(scope), do: Repo.rollback(:unauthorized)
+          %{create_workspace_board!(workspace) | authorized_user_id: scope.user.id}
+        end)
+      end
+    else
+      {:error, :unauthorized}
+    end
+  end
+
+  defp authorized_board(_scope), do: {:error, :unauthorized}
+
+  def list_columns(%Scope{} = scope) do
+    case authorized_board(scope) do
+      {:ok, board} -> list_columns(board)
+      _ -> []
+    end
+  end
+
   def list_columns(%Board{id: board_id}) do
     Repo.all(
       from column in Column,
         where: column.board_id == ^board_id,
         order_by: [asc: column.position, asc: column.id]
     )
+  end
+
+  def get_column(%Scope{} = scope, id) do
+    case authorized_board(scope) do
+      {:ok, board} -> get_column(board, id)
+      _ -> nil
+    end
   end
 
   def get_column(%Board{id: board_id}, id) do
@@ -50,6 +138,13 @@ defmodule Devloom.Boards do
   end
 
   def change_column(%Column{} = column, attrs \\ %{}), do: Column.changeset(column, attrs)
+
+  def create_column(%Scope{} = scope, attrs) do
+    case authorized_board(scope) do
+      {:ok, board} -> create_column(board, attrs)
+      _ -> {:error, :unauthorized}
+    end
+  end
 
   def create_column(%Board{} = board, attrs) do
     mutate(board, fn ->
@@ -64,6 +159,13 @@ defmodule Devloom.Boards do
     end)
   end
 
+  def update_column(%Scope{} = scope, column, attrs) do
+    case authorized_board(scope) do
+      {:ok, board} -> update_column(board, column, attrs)
+      _ -> {:error, :unauthorized}
+    end
+  end
+
   def update_column(%Board{} = board, %Column{} = column, attrs) do
     mutate(board, fn ->
       board
@@ -73,6 +175,13 @@ defmodule Devloom.Boards do
       |> Repo.update()
       |> unwrap!()
     end)
+  end
+
+  def move_column(%Scope{} = scope, id, direction) do
+    case authorized_board(scope) do
+      {:ok, board} -> move_column(board, id, direction)
+      _ -> {:error, :unauthorized}
+    end
   end
 
   def move_column(%Board{} = board, id, direction) do
@@ -104,7 +213,16 @@ defmodule Devloom.Boards do
   end
 
   @doc "Deletes a column, moving its cards to an explicitly chosen destination when necessary."
-  def delete_column(%Board{} = board, %Column{} = column, destination_id \\ nil) do
+  def delete_column(scope_or_board, column, destination_id \\ nil)
+
+  def delete_column(%Scope{} = scope, column, destination_id) do
+    case authorized_board(scope) do
+      {:ok, board} -> delete_column(board, column, destination_id)
+      _ -> {:error, :unauthorized}
+    end
+  end
+
+  def delete_column(%Board{} = board, %Column{} = column, destination_id) do
     mutate(board, fn ->
       current = current_column!(board, column)
       columns = list_columns(board)
@@ -140,16 +258,39 @@ defmodule Devloom.Boards do
     end)
   end
 
+  def subscribe(%Scope{} = scope) do
+    case authorized_board(scope) do
+      {:ok, board} -> subscribe(board)
+      _ -> {:error, :unauthorized}
+    end
+  end
+
   def subscribe(%Board{id: id}) do
     Phoenix.PubSub.subscribe(Devloom.PubSub, topic(id))
   end
 
-  def list_work_items(%Board{id: board_id}, filters \\ %{}) do
+  def list_work_items(scope_or_board, filters \\ %{})
+
+  def list_work_items(%Scope{} = scope, filters) do
+    case authorized_board(scope) do
+      {:ok, board} -> list_work_items(board, filters)
+      _ -> []
+    end
+  end
+
+  def list_work_items(%Board{id: board_id}, filters) do
     WorkItem
     |> where([item], item.board_id == ^board_id)
     |> filter_query(filters)
     |> order_by([item], asc: item.position, asc: item.id)
     |> Repo.all()
+  end
+
+  def get_work_item(%Scope{} = scope, id) do
+    case authorized_board(scope) do
+      {:ok, board} -> get_work_item(board, id)
+      _ -> nil
+    end
   end
 
   def get_work_item(%Board{id: board_id}, id) do
@@ -161,6 +302,13 @@ defmodule Devloom.Boards do
 
   def change_work_item(%WorkItem{} = work_item, attrs \\ %{}) do
     WorkItem.changeset(work_item, attrs)
+  end
+
+  def create_work_item(%Scope{} = scope, attrs) do
+    case authorized_board(scope) do
+      {:ok, board} -> create_work_item(board, attrs)
+      _ -> {:error, :unauthorized}
+    end
   end
 
   def create_work_item(%Board{} = board, attrs) do
@@ -178,6 +326,13 @@ defmodule Devloom.Boards do
       |> Repo.insert()
       |> unwrap!()
     end)
+  end
+
+  def update_work_item(%Scope{} = scope, work_item, attrs) do
+    case authorized_board(scope) do
+      {:ok, board} -> update_work_item(board, work_item, attrs)
+      _ -> {:error, :unauthorized}
+    end
   end
 
   def update_work_item(%Board{} = board, %WorkItem{} = work_item, attrs) do
@@ -210,6 +365,13 @@ defmodule Devloom.Boards do
     end)
   end
 
+  def delete_work_item(%Scope{} = scope, work_item) do
+    case authorized_board(scope) do
+      {:ok, board} -> delete_work_item(board, work_item)
+      _ -> {:error, :unauthorized}
+    end
+  end
+
   def delete_work_item(%Board{} = board, %WorkItem{} = work_item) do
     mutate(board, fn ->
       current = current_item!(board, work_item)
@@ -220,7 +382,16 @@ defmodule Devloom.Boards do
   end
 
   @doc "Moves an item before a destination item, or to the end when before_id is nil."
-  def move_work_item(%Board{} = board, id, status, before_id \\ nil) do
+  def move_work_item(scope_or_board, id, status, before_id \\ nil)
+
+  def move_work_item(%Scope{} = scope, id, status, before_id) do
+    case authorized_board(scope) do
+      {:ok, board} -> move_work_item(board, id, status, before_id)
+      _ -> {:error, :unauthorized}
+    end
+  end
+
+  def move_work_item(%Board{} = board, id, status, before_id) do
     mutate(board, fn ->
       status = cast_status!(board, status)
       item = get_work_item(board, id) || Repo.rollback(:not_found)
@@ -257,6 +428,13 @@ defmodule Devloom.Boards do
   end
 
   @doc "Loads an example board only when it contains no work items."
+  def seed_sample_items(%Scope{} = scope) do
+    case authorized_board(scope) do
+      {:ok, board} -> seed_sample_items(board)
+      _ -> {:error, :unauthorized}
+    end
+  end
+
   def seed_sample_items(%Board{} = board) do
     mutate(board, fn ->
       if Repo.exists?(from item in WorkItem, where: item.board_id == ^board.id) do
@@ -280,11 +458,39 @@ defmodule Devloom.Boards do
     end)
   end
 
+  @doc false
+  def lock_authorized_board!(%Board{} = board) do
+    if board.authorized_user_id do
+      Repo.one(
+        from workspace in Workspace,
+          where: workspace.id == ^board.workspace_id,
+          lock: "FOR UPDATE"
+      ) || Repo.rollback(:unauthorized)
+
+      if !Repo.exists?(
+           from membership in Membership,
+             where:
+               membership.workspace_id == ^board.workspace_id and
+                 membership.user_id == ^board.authorized_user_id
+         ) do
+        Repo.rollback(:unauthorized)
+      end
+    end
+
+    Repo.one(
+      from current in Board,
+        where:
+          current.id == ^board.id and
+            current.workspace_id == ^board.workspace_id,
+        lock: "FOR UPDATE"
+    ) ||
+      Repo.rollback(:not_found)
+  end
+
   defp mutate(board, fun) do
     result =
       Repo.transaction(fn ->
-        Repo.one(from current in Board, where: current.id == ^board.id, lock: "FOR UPDATE") ||
-          Repo.rollback(:not_found)
+        lock_authorized_board!(board)
 
         fun.()
       end)

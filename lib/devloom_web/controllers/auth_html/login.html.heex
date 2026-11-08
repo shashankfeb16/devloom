@@ -1,0 +1,43 @@
+<Layouts.app flash={@flash} current_scope={@current_scope}>
+  <section class="auth-card" aria-labelledby="auth-title">
+    <span class="auth-eyebrow">WELCOME BACK TO DEVLOOM</span>
+    <h1 id="auth-title" class="auth-title">Pick up where you left off.</h1>
+    <p class="auth-subtitle">
+      Your workspaces, your team, and every conversation that moves the work forward.
+    </p>
+
+    <p :if={@error} id="login-error" class="auth-error" role="alert">
+      <.icon name="hero-exclamation-circle" class="size-4" />{@error}
+    </p>
+    <.form for={@form} id="login-form" action={~p"/users/log_in"} method="post" class="auth-form">
+      <input :if={@return_to} type="hidden" name="return_to" value={@return_to} />
+      <.input
+        field={@form[:email]}
+        type="email"
+        label="Email address"
+        class="form-input"
+        autocomplete="username"
+        maxlength="160"
+        required
+      />
+      <.input
+        field={@form[:password]}
+        type="password"
+        value=""
+        label="Password"
+        class="form-input"
+        autocomplete="current-password"
+        required
+      />
+      <button id="sign-in" type="submit" class="button button-primary">Sign in<.icon
+        name="hero-arrow-right"
+        class="size-4"
+      /></button>
+    </.form>
+
+    <p class="auth-footer">
+      New to Devloom?
+      <.link href={~p"/users/register?#{if @return_to, do: [return_to: @return_to], else: []}"}>Create an account</.link>
+    </p>
+  </section>
+</Layouts.app>
