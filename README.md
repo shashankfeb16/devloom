@@ -45,14 +45,24 @@ All board reads, edits, and live subscriptions resolve the signed-in user's curr
 
 ## Use Team chat
 
-Open a workspace and select **Team chat**. On phones, use the navigation below the top bar to switch between workspaces, the board, chat, and members.
+Open a workspace and select **Chat**, then **Team chat** for the shared conversation. On phones, use the navigation below the top bar to switch between workspaces, the board, chat, and members.
 
 - Write a message and select **Send message**. Your signed-in account supplies the author name. Enter adds a new line; Ctrl+Enter or Cmd+Enter sends.
 - Messages persist in PostgreSQL and appear in other connected chat tabs without refreshing. Refreshing loads the latest conversation.
 - The latest 50 messages load first. Use **Load older messages** to read previous pages, and return to the latest messages when finished. The visible history is bounded to keep long conversations responsive.
 - Your browser temporarily keeps your unsent draft separately for each account and workspace. Validation errors preserve the draft so you can correct it. Reconnecting restores the conversation; repeated sends of the same pending message do not create duplicate records.
 
-Each workspace has one conversation accessible only to its members. Private messages, channels, attachments, message editing, and message deletion are not part of this increment.
+Each workspace has one team conversation accessible only to its members. Your messages appear on the right and other members’ messages on the left.
+
+### Private conversations and member status
+
+Choose another workspace member under **Direct messages** to open a private one-on-one conversation. On phones, select **People** above the conversation to open the member list. You can also use the message button beside a person on **Members & invites**.
+
+Only the two participants can read or send messages in that conversation; a workspace owner who is not a participant has no access. Private history is stored separately from team chat. Opening the same pair from either account returns the same conversation, and the same people in a different workspace have a separate history. Switching conversations keeps drafts separate.
+
+Online/offline indicators update automatically in the chat directory, conversation header, and member list. **Online** means at least one live tab is connected to that workspace, including its board or members page. Multiple tabs count as one person; the status becomes **Offline** after the last connection closes or disconnects. An offline member can still receive saved private messages and read them when they return.
+
+Both participants must remain members of the workspace. Removing a member ends their private-chat access and closes the conversation for the other participant. History is retained if that person later rejoins. Attachments, message editing, deletion, and additional group channels are not implemented.
 
 After pulling this change into an already running development stack, install the new password-hashing dependency, apply migrations, and build the browser assets:
 

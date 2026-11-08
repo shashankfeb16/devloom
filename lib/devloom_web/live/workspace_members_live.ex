@@ -1,10 +1,12 @@
 defmodule DevloomWeb.WorkspaceMembersLive do
   use DevloomWeb, :live_view
 
-  alias Devloom.Workspaces
+  alias Devloom.{WorkspacePresence, Workspaces}
 
   @impl true
   def mount(_params, _session, socket) do
+    if connected?(socket), do: WorkspacePresence.subscribe(socket.assigns.current_scope)
+
     {:ok,
      socket
      |> assign(
@@ -116,6 +118,10 @@ defmodule DevloomWeb.WorkspaceMembersLive do
     {:noreply, refresh_members(socket)}
   end
 
+  def handle_info(%Phoenix.Socket.Broadcast{event: "presence_diff"}, socket) do
+    {:noreply, refresh_members(socket)}
+  end
+
   defp refresh_members(socket) do
     scope = socket.assigns.current_scope
     members = Workspaces.list_members(scope)
@@ -126,6 +132,7 @@ defmodule DevloomWeb.WorkspaceMembersLive do
     |> assign(
       workspace: scope.workspace,
       owner?: owner?,
+      online_user_ids: WorkspacePresence.online_user_ids(scope),
       member_count: length(members),
       invitation_count: length(invitations)
     )
@@ -177,6 +184,17 @@ defmodule DevloomWeb.WorkspaceMembersLive do
                   <span class="workspace-member-avatar">{initials(member.user.name)}</span>
                   <div class="workspace-member-details">
                     <strong>{member.user.name}<small :if={member.user_id == @current_scope.user.id}>You</small></strong><span>{member.user.email}</span>
+                    <span
+                      id={"member-status-#{member.user_id}"}
+                      class="member-presence"
+                      data-online={to_string(MapSet.member?(@online_user_ids, member.user_id))}
+                      title="Online while connected to this workspace"
+                    ><span class="presence-dot" aria-hidden="true"></span>{if MapSet.member?(
+                                                                                @online_user_ids,
+                                                                                member.user_id
+                                                                              ),
+                                                                              do: "Online",
+                                                                              else: "Offline"}</span>
                   </div>
                   <span class={["workspace-role", member.role == :owner && "is-owner"]}>{if member.role ==
                                                                                               :owner,
@@ -184,6 +202,14 @@ defmodule DevloomWeb.WorkspaceMembersLive do
                                                                                               "Owner",
                                                                                             else:
                                                                                               "Member"}</span>
+                  <.link
+                    :if={member.user_id != @current_scope.user.id}
+                    id={"message-member-#{member.user_id}"}
+                    navigate={~p"/workspaces/#{@workspace.id}/chat/direct/#{member.user_id}"}
+                    class="workspace-row-action workspace-message-member"
+                    aria-label={"Message #{member.user.name}"}
+                    title={"Message #{member.user.name}"}
+                  ><.icon name="hero-chat-bubble-left-right" class="size-4" /></.link>
                   <button
                     :if={@owner? && member.role != :owner}
                     id={"remove-member-#{member.id}"}

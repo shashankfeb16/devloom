@@ -59,6 +59,7 @@ defmodule DevloomWeb.WorkspaceAccessTest do
     render_submit(view, "send_message", %{
       "message" => %{
         "body" => "A message from my account",
+        "context" => "devloom:chat:#{user.id}:#{Boards.get_workspace_board!(scope).id}",
         "sender_name" => "Someone else",
         "user_id" => 999_999,
         "board_id" => 999_999,

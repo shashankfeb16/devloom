@@ -2,6 +2,8 @@
 @import "phoenix-colocated/devloom/colocated.css";
 @import "./accounts.css";
 @import "./workspaces.css";
+@import "./presence.css";
+@import "./direct_chat.css";
 @source "../css";
 @source "../js";
 @source "../../lib/devloom_web";

@@ -147,7 +147,7 @@ defmodule DevloomWeb.Layouts do
             class={["nav-item", "workspace-chat-link", @active_view == "chat" && "active"]}
             aria-current={@active_view == "chat" && "page"}
           >
-            <.icon name="hero-chat-bubble-left-right" class="size-[18px]" /><span>Team chat</span>
+            <.icon name="hero-chat-bubble-left-right" class="size-[18px]" /><span>Chat</span>
           </.link>
           <.link
             :if={@workspace}
@@ -198,7 +198,7 @@ defmodule DevloomWeb.Layouts do
     """
   end
 
-  defp view_title("chat"), do: "Team chat"
+  defp view_title("chat"), do: "Chat"
   defp view_title("members"), do: "Members"
   defp view_title("workspaces"), do: "Your workspaces"
   defp view_title("list"), do: "Work items"
