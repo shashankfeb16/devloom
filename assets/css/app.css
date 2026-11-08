@@ -4,6 +4,7 @@
 @import "./workspaces.css";
 @import "./presence.css";
 @import "./direct_chat.css";
+@import "./sidebar.css";
 @source "../css";
 @source "../js";
 @source "../../lib/devloom_web";
