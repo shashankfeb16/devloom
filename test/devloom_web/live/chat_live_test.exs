@@ -129,6 +129,66 @@ defmodule DevloomWeb.ChatLiveTest do
     refute has_element?(view, "#chat-message-#{first.id}")
   end
 
+  test "message ownership follows account IDs for history and live updates even when names match",
+       %{
+         conn: conn,
+         scope: scope,
+         board: board,
+         user: user,
+         workspace: workspace
+       } do
+    teammate = Devloom.AccountsFixtures.user_fixture(%{name: user.name})
+
+    {:ok, _invitation, token} =
+      Devloom.Workspaces.create_invitation(scope, %{email: teammate.email})
+
+    teammate_scope = Devloom.Accounts.Scope.for_user(teammate)
+    {:ok, _workspace} = Devloom.Workspaces.accept_invitation(teammate_scope, token)
+    {:ok, teammate_scope} = Devloom.Workspaces.fetch_scope(teammate_scope, workspace.id)
+
+    legacy = create_message(board, %{sender_name: user.name, body: "An older guest message"})
+    own_older = create_message(scope, %{body: "My older message"})
+    teammate_older = create_message(teammate_scope, %{body: "My teammate's older message"})
+
+    for index <- 1..50, do: create_message(scope, %{body: "Recent message #{index}"})
+
+    {:ok, own_view, _html} = live(conn, chat_path(conn))
+    teammate_conn = log_in_user(build_conn(), teammate)
+    {:ok, teammate_view, _html} = live(teammate_conn, chat_path(conn))
+
+    for view <- [own_view, teammate_view] do
+      refute has_element?(view, "#chat-message-#{legacy.id}")
+      view |> element("#load-older-messages") |> render_click()
+      assert has_element?(view, "#chat-message-#{legacy.id}[data-own-message='false']")
+    end
+
+    assert has_element?(own_view, "#chat-message-#{own_older.id}[data-own-message='true']")
+    assert has_element?(teammate_view, "#chat-message-#{own_older.id}[data-own-message='false']")
+    assert has_element?(own_view, "#chat-message-#{teammate_older.id}[data-own-message='false']")
+
+    assert has_element?(
+             teammate_view,
+             "#chat-message-#{teammate_older.id}[data-own-message='true']"
+           )
+
+    for view <- [own_view, teammate_view],
+        do: view |> element("#jump-to-latest") |> render_click()
+
+    submit_message(own_view, user.name, "A new message from me")
+    own_live = scope |> Chat.list_messages() |> List.last()
+    assert has_element?(own_view, "#chat-message-#{own_live.id}[data-own-message='true']")
+    assert has_element?(teammate_view, "#chat-message-#{own_live.id}[data-own-message='false']")
+
+    submit_message(teammate_view, teammate.name, "A live reply from my teammate")
+    teammate_live = scope |> Chat.list_messages() |> List.last()
+    assert has_element?(own_view, "#chat-message-#{teammate_live.id}[data-own-message='false']")
+
+    assert has_element?(
+             teammate_view,
+             "#chat-message-#{teammate_live.id}[data-own-message='true']"
+           )
+  end
+
   test "saved history appears in a new session and message markup is displayed as text", %{
     conn: conn,
     board: board

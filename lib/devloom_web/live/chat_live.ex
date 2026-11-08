@@ -168,16 +168,10 @@ defmodule DevloomWeb.ChatLive do
       <section id="chat-page" class="chat-page" aria-labelledby="chat-title">
         <header class="page-heading chat-page-heading">
           <div>
-            <div class="page-eyebrow">
-              <span class="eyebrow-line"></span>THE CONVERSATION CONTINUES
-            </div>
             <div class="page-title-row">
               <h1 id="chat-title">Team chat</h1>
               <span class="shared-badge"><.icon name="hero-user-group" class="size-3" />Shared</span>
             </div>
-            <p class="page-intro">
-              A little context. A quick question. A place to keep the team in sync.
-            </p>
           </div>
           <.link
             navigate={~p"/workspaces/#{@current_scope.workspace.id}/board"}
@@ -193,7 +187,7 @@ defmodule DevloomWeb.ChatLive do
             <div>
               <h2>general</h2><p>One conversation for everyone in {@current_scope.workspace.name}</p>
             </div>
-            <span class="chat-channel-label"><.icon name="hero-globe-alt" class="size-3.5" />Workspace chat</span>
+            <span class="chat-channel-label"><.icon name="hero-lock-closed" class="size-3.5" />Workspace members only</span>
           </header>
 
           <div class="chat-scroll-frame">
@@ -241,24 +235,33 @@ defmodule DevloomWeb.ChatLive do
                 <article
                   :for={{dom_id, message} <- @streams.messages}
                   id={dom_id}
-                  class="chat-message"
+                  class={[
+                    "chat-message",
+                    message.user_id == @current_scope.user.id && "chat-message-own"
+                  ]}
                   data-message-id={message.id}
+                  data-own-message={to_string(message.user_id == @current_scope.user.id)}
                 >
-                  <span class="chat-message-avatar" aria-hidden="true">{initials(message.sender_name)}</span>
+                  <span
+                    :if={message.user_id != @current_scope.user.id}
+                    class="chat-message-avatar"
+                    aria-hidden="true"
+                  >{initials(message.sender_name)}</span>
                   <div class="chat-message-content">
                     <div class="chat-message-meta">
                       <strong>{message.sender_name}</strong>
-                      <time
-                        id={"chat-time-#{message.id}"}
-                        datetime={DateTime.to_iso8601(message.inserted_at)}
-                        phx-hook="ChatTimestamp"
-                        phx-update="ignore"
-                        title={Calendar.strftime(message.inserted_at, "%d %b %Y, %H:%M UTC")}
-                      >
-                        {Calendar.strftime(message.inserted_at, "%d %b, %H:%M UTC")}
-                      </time>
                     </div>
                     <p class="chat-message-body">{message.body}</p>
+                    <time
+                      id={"chat-time-#{message.id}"}
+                      class="chat-message-time"
+                      datetime={DateTime.to_iso8601(message.inserted_at)}
+                      phx-hook="ChatTimestamp"
+                      phx-update="ignore"
+                      title={Calendar.strftime(message.inserted_at, "%d %b %Y, %H:%M UTC")}
+                    >
+                      {Calendar.strftime(message.inserted_at, "%d %b, %H:%M UTC")}
+                    </time>
                   </div>
                 </article>
               </div>
@@ -292,12 +295,6 @@ defmodule DevloomWeb.ChatLive do
             data-storage-key={"devloom:chat:#{@current_scope.user.id}:#{@board.id}"}
           >
             <.input field={@form[:client_ref]} type="hidden" />
-            <div class="chat-composer-identity">
-              <.icon name="hero-user-circle" class="size-4" />
-              <span class="chat-signed-identity">Sending as
-              <strong id="chat-sender-name">{@current_scope.user.name}</strong></span>
-              <span class="chat-guest-note">Workspace members only</span>
-            </div>
             <div class="chat-composer-message">
               <.input
                 field={@form[:body]}
@@ -307,30 +304,31 @@ defmodule DevloomWeb.ChatLive do
                 class="chat-message-input"
                 placeholder="What's on your mind?"
                 maxlength="4000"
-                rows="3"
+                rows="2"
                 required
                 phx-debounce="300"
                 aria-describedby="chat-composer-hint"
               />
-              <div class="chat-composer-actions">
-                <span id="chat-composer-hint"><kbd>↵</kbd>
-                new line <span>·</span> <kbd>⌘ / Ctrl</kbd>
-                + <kbd>↵</kbd>
-                send</span>
-                <button
-                  id="send-message"
-                  type="submit"
-                  class="button button-primary"
-                  phx-disable-with="Sending…"
-                  disabled={!@connected?}
-                >
-                  <span>Send message</span><.icon name="hero-paper-airplane" class="size-4" />
-                </button>
-              </div>
+              <button
+                id="send-message"
+                type="submit"
+                class="button button-primary"
+                phx-disable-with="Sending…"
+                disabled={!@connected?}
+                aria-label="Send message"
+              >
+                <span>Send message</span><.icon name="hero-paper-airplane" class="size-4" />
+              </button>
             </div>
-            <p class="chat-composer-footnote">
-              <.icon name="hero-lock-closed" class="size-3" />Saved in your workspace. Visible to everyone with access.
-            </p>
+            <div class="chat-composer-footer">
+              <span class="chat-signed-identity">
+                Sending as <strong id="chat-sender-name">{@current_scope.user.name}</strong>
+              </span>
+              <span id="chat-composer-hint">
+                <kbd>↵</kbd> new line <span>·</span>
+                <kbd>⌘ / Ctrl</kbd> + <kbd>↵</kbd> send
+              </span>
+            </div>
             <p id="chat-offline-notice" class="chat-offline-notice" role="status" hidden>
               Reconnecting… Your draft is kept in this tab.
             </p>

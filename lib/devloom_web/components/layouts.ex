@@ -33,7 +33,7 @@ defmodule DevloomWeb.Layouts do
 
     ~H"""
     <a href="#main-content" class="skip-link">Skip to content</a>
-    <div class="workspace-shell">
+    <div class={["workspace-shell", @active_view == "chat" && "workspace-shell-chat"]}>
       <header class="workspace-topbar">
         <.link navigate={~p"/workspaces"} class="brand" aria-label="Devloom home">
           <img src={~p"/images/logo.svg"} alt="" width="29" height="29" /><span>devloom</span>
@@ -187,7 +187,12 @@ defmodule DevloomWeb.Layouts do
           </div>
         </div>
       </aside>
-      <main id="main-content" class="workspace-content">{render_slot(@inner_block)}</main>
+      <main
+        id="main-content"
+        class={["workspace-content", @active_view == "chat" && "workspace-content-chat"]}
+      >
+        {render_slot(@inner_block)}
+      </main>
     </div>
     <.flash_group flash={@flash} />
     """
