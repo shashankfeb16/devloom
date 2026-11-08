@@ -17,7 +17,7 @@ defmodule DevloomWeb.Router do
   scope "/", DevloomWeb do
     pipe_through :browser
 
-    live "/", HomeLive
+    live "/", BoardLive
   end
 
   scope "/", DevloomWeb do

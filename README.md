@@ -2,15 +2,38 @@
 
 Devloom is the working name for a shared developer workspace: one place to organize work and preserve the discussions and knowledge around it.
 
-This is **increment 0: the running application foundation**. It provides a Phoenix starter, a LiveView interface, PostgreSQL connectivity, and a health endpoint. The feature modules will be built in this order:
+This is **increment 1: the shared Kanban board**. It builds on the Phoenix, LiveView, PostgreSQL, and health-check foundation with a DevOps-inspired project shell and a persistent, live team board. The feature modules are being built one at a time:
 
-1. Kanban board
+1. Kanban board — implemented with work item CRUD and live collaboration
 2. Work items and ticket details
 3. Project documentation and the team handbook
 4. Chat
 5. Meetings
 
-These modules are planned; they are not implemented in this starter. Authentication, invitations, membership permissions, and server hosting are also future work. Run this increment locally for development.
+Documentation, chat, meetings, and richer ticket workflows remain planned. Authentication, invitations, membership permissions, and server hosting are future work. Run this increment locally for development.
+
+## Use the Kanban board
+
+New boards start with five workflow columns: **Backlog → To do → In progress → In review → Done**. Select **Configure board** to adapt this workflow to your team.
+
+- **Create:** select **New work item**, or use a column's **+** button to prefill its status.
+- **Read and edit:** select a card title to open its details panel. Work items support a title, description, type (feature/task/bug), priority, status, story points, comma-separated labels, and an optional assignee name.
+- **Move:** drag a card to another column or between cards to reorder it. On touch screens, drag the three-dot handle. Alternatively, focus that handle, press Space, choose a position with the arrow keys, and press Space again to save. Status can also be changed in the editor.
+- **Delete:** select **Delete** in the details panel and confirm the inline prompt.
+- **Find:** search titles and descriptions or filter by type, priority, and unassigned work. Switch between **Board** and **Work items** to inspect the same work in a compact list.
+- **Explore:** an empty board offers **Try an example board**. Examples are added only on request, only to an empty board, and remain ordinary editable work items. Refreshing never recreates deleted items.
+
+### Configure the workflow
+
+Select **Configure board** beside **New work item** to add columns, edit their names and descriptions, choose a color, or move them earlier/later in the workflow. Column names must be unique within the board. Mark a column as complete when its work should contribute to the progress indicator; more than one column can count as complete.
+
+To remove a column, select its trash button and confirm. A column with work items requires a destination: its cards move to the end of the selected column in their existing order. Deleting a column never deletes its work items, and the final column cannot be removed. Renaming keeps cards in place. Configuration survives reloads and synchronizes with other open sessions, including work-item status menus and drag targets.
+
+Existing boards keep their workflow and cards when the migration runs. Removed default columns are never recreated on refresh. Column configuration is available to all sessions for now; an admin permission check can be added when accounts and roles are implemented.
+
+Changes persist in PostgreSQL. Open the same board in two browser tabs to see creates, edits, deletes, and moves synchronize without refreshing. Phoenix PubSub publishes changes after transactions commit. Board-level database locks keep simultaneous moves ordered, and version checks prevent an older editor from overwriting a newer change. A stale editor keeps its draft and offers to load the latest version.
+
+This increment has one shared board and no sign-in. All connected sessions can edit it. Assignees are plain names, not user accounts; the context scopes work items, mutations, and subscriptions to a persisted board so a later membership layer can resolve authorized boards before calling it. The development server is published only on localhost by default; users on other computers will need a shared deployment in a later increment.
 
 ## Start the application
 
@@ -144,7 +167,7 @@ Open [http://localhost:4000/health](http://localhost:4000/health), adjusting the
 - If a configuration edit does not appear, run `docker compose restart web`.
 - If a dependency change causes a lockfile error and `web` has stopped, run `docker compose run --rm --no-deps web mix deps.get`, then `docker compose up --build -d --wait web`. The one-off command works without a running web service. Commit the updated lockfile.
 
-## Verified starter behavior
+## Foundation verification
 
 Validated on an Apple Silicon Mac using Docker Desktop on 7 November 2026:
 
