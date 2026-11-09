@@ -120,24 +120,6 @@ defmodule Devloom.BoardColumnsTest do
     assert_column_positions(board)
   end
 
-  test "drag reorders across multiple positions and preserves work items", %{board: board} do
-    {:ok, item} = Boards.create_work_item(board, %{title: "Keep this card", status: "done"})
-    done = column(board, "done")
-    backlog = column(board, "backlog")
-
-    assert {:ok, moved} = Boards.reorder_column(board, done.id, backlog.id)
-    assert moved.position == 0
-    assert column_keys(board) == ~w(done backlog todo in_progress in_review)
-    assert {:ok, _} = Boards.reorder_column(board, done.id, nil)
-    assert column_keys(board) == ~w(backlog todo in_progress in_review done)
-    assert {:ok, _} = Boards.reorder_column(board, done.id, done.id)
-    assert {:error, :invalid_target} = Boards.reorder_column(board, done.id, "invalid")
-    assert {:error, :invalid_target} = Boards.reorder_column(board, done.id, -1)
-    assert column_keys(board) == ~w(backlog todo in_progress in_review done)
-    assert Boards.get_work_item(board, item.id) == item
-    assert_column_positions(board)
-  end
-
   test "deletes an empty default column permanently without resurrecting it on reconnect", %{
     board: board
   } do
@@ -247,11 +229,6 @@ defmodule Devloom.BoardColumnsTest do
     assert Boards.get_column(board, String.duplicate("9", 100)) == nil
     assert {:error, :not_found} = Boards.update_column(board, foreign, %{title: "Overwrite"})
     assert {:error, :not_found} = Boards.move_column(board, foreign.id, "left")
-    assert {:error, :not_found} = Boards.reorder_column(board, foreign.id, nil)
-
-    assert {:error, :invalid_target} =
-             Boards.reorder_column(board, column(board, "backlog").id, foreign.id)
-
     assert {:error, :not_found} = Boards.delete_column(board, foreign)
     assert {:error, :invalid_status} = Boards.move_work_item(board, item.id, foreign.key)
     assert {:error, changeset} = Boards.update_work_item(board, item, %{status: foreign.key})

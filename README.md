@@ -33,7 +33,7 @@ New boards start with five workflow columns: **Backlog → To do → In progress
 
 ### Configure the workflow
 
-Select **Configure board** beside **New work item** to add columns, edit their names and descriptions, choose a color, or drag their handles to reorder the workflow. Handles support mouse and touch. With a keyboard, focus a handle, press Space, use the up/down arrows, and press Enter to drop or Escape to cancel. Column names must be unique within the board. Mark a column as complete when its work should contribute to the progress indicator; more than one column can count as complete.
+Select **Configure board** beside **New work item** to add columns, edit their names and descriptions, choose a color, or move them earlier/later in the workflow. Column names must be unique within the board. Mark a column as complete when its work should contribute to the progress indicator; more than one column can count as complete.
 
 To remove a column, select its trash button and confirm. A column with work items requires a destination: its cards move to the end of the selected column in their existing order. Deleting a column never deletes its work items, and the final column cannot be removed. Renaming keeps cards in place. Configuration survives reloads and synchronizes with other open sessions, including work-item status menus and drag targets.
 

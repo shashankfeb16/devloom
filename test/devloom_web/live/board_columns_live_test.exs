@@ -10,7 +10,7 @@ defmodule DevloomWeb.BoardColumnsLiveTest do
     Map.put(context, :columns, Boards.list_columns(context.scope))
   end
 
-  test "column settings expose drag handles for the existing workflow", %{
+  test "column settings expose the existing workflow and protect reorder boundaries", %{
     conn: conn,
     columns: columns
   } do
@@ -24,11 +24,10 @@ defmodule DevloomWeb.BoardColumnsLiveTest do
       assert has_element?(view, "#column-setting-#{column.id}")
       assert has_element?(view, "#edit-column-#{column.id}")
       assert has_element?(view, "#delete-column-#{column.id}")
-      assert has_element?(view, "#drag-column-#{column.id}[data-column-drag-handle]")
     end
 
-    assert has_element?(view, "#column-settings-list[phx-hook='ColumnReorder']")
-    refute has_element?(view, "[title='Move earlier'], [title='Move later']")
+    assert has_element?(view, "#move-column-left-#{hd(columns).id}[disabled]")
+    assert has_element?(view, "#move-column-right-#{List.last(columns).id}[disabled]")
 
     view |> element("#close-column-settings") |> render_click()
     refute has_element?(view, "#column-settings-dialog")
@@ -112,7 +111,7 @@ defmodule DevloomWeb.BoardColumnsLiveTest do
     {:ok, first_view, _html} = live(conn, board_path(conn))
     {:ok, second_view, _html} = live(second_conn(conn), board_path(conn))
     open_settings(first_view)
-    render_hook(first_view, "reorder_column", %{id: first.id, before_id: hd(remaining).id})
+    first_view |> element("#move-column-right-#{first.id}") |> render_click()
 
     assert Enum.map(Boards.list_columns(board), & &1.id) ==
              Enum.map([second, first | remaining], & &1.id)
@@ -130,36 +129,13 @@ defmodule DevloomWeb.BoardColumnsLiveTest do
     {:ok, remounted, _html} = live(second_conn(conn), board_path(conn))
     assert has_element?(remounted, "#kanban-board > #column-#{second.key} + #column-#{first.key}")
 
-    render_hook(first_view, "reorder_column", %{id: first.id, before_id: second.id})
+    first_view |> element("#move-column-left-#{first.id}") |> render_click()
     assert hd(Boards.list_columns(board)).id == first.id
 
     assert has_element?(
              second_view,
              "#kanban-board > #column-#{first.key} + #column-#{second.key}"
            )
-  end
-
-  test "drag moves can skip columns, append, and reject missing destinations", %{
-    conn: conn,
-    board: board,
-    columns: columns
-  } do
-    {:ok, view, _html} = live(conn, board_path(conn))
-    open_settings(view)
-    first = hd(columns)
-    last = List.last(columns)
-
-    render_hook(view, "reorder_column", %{id: last.id, before_id: first.id})
-    assert hd(Boards.list_columns(board)).id == last.id
-    assert has_element?(view, "#column-settings-list > #column-setting-#{last.id}:first-child")
-
-    render_hook(view, "reorder_column", %{id: last.id, before_id: nil})
-    assert Enum.map(Boards.list_columns(board), & &1.id) == Enum.map(columns, & &1.id)
-    assert has_element?(view, "#column-settings-list > #column-setting-#{last.id}:last-child")
-
-    render_hook(view, "reorder_column", %{id: first.id, before_id: "invalid"})
-    assert Enum.map(Boards.list_columns(board), & &1.id) == Enum.map(columns, & &1.id)
-    assert has_element?(view, "#column-settings-notice")
   end
 
   test "custom columns are available for new items, editing and drag moves", %{
@@ -278,7 +254,6 @@ defmodule DevloomWeb.BoardColumnsLiveTest do
     open_settings(view)
 
     assert has_element?(view, "#delete-column-#{remaining.id}[disabled]")
-    assert has_element?(view, "#drag-column-#{remaining.id}[disabled]")
     assert Boards.list_columns(board) == [Boards.get_column(board, remaining.id)]
     assert has_element?(view, "#column-#{remaining.key}")
   end
