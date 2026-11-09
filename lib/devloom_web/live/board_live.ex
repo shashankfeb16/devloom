@@ -242,8 +242,8 @@ defmodule DevloomWeb.BoardLive do
     end
   end
 
-  def handle_event("move_column", %{"id" => id, "direction" => direction}, socket) do
-    case Boards.move_column(socket.assigns.current_scope, id, direction) do
+  def handle_event("reorder_column", %{"id" => id, "before_id" => before_id}, socket) do
+    case Boards.reorder_column(socket.assigns.current_scope, id, before_id) do
       {:ok, _column} -> {:noreply, refresh_board(socket)}
       {:error, reason} -> {:noreply, settings_error(socket, reason)}
     end
@@ -404,8 +404,6 @@ defmodule DevloomWeb.BoardLive do
       assign(socket,
         columns: columns,
         all_counts: Enum.frequencies_by(items, & &1.status),
-        first_column_id: List.first(columns).id,
-        last_column_id: List.last(columns).id,
         total_count: total,
         visible_count: length(visible_items),
         counts: counts,
@@ -991,7 +989,16 @@ defmodule DevloomWeb.BoardLive do
                 phx-click={JS.push("add_column") |> JS.focus(to: "#column_title")}
               ><.icon name="hero-plus" class="size-4" />Add column</button>
             </div>
-            <div id="column-settings-list" phx-update="stream" class="column-settings-list">
+            <p id="column-reorder-help" class="column-reorder-help">
+              Drag the handle to reorder. Or press Space, use arrow keys, and press Enter to drop.
+            </p>
+            <p id="column-reorder-announcer" class="sr-only" role="status" aria-live="polite"></p>
+            <div
+              id="column-settings-list"
+              phx-update="stream"
+              phx-hook="ColumnReorder"
+              class="column-settings-list"
+            >
               <div
                 :for={{dom_id, column} <- @streams.column_settings}
                 id={dom_id}
@@ -1000,6 +1007,8 @@ defmodule DevloomWeb.BoardLive do
                   @editing_column && @editing_column.id == column.id && "is-editing"
                 ]}
                 data-color={column.color}
+                data-column-id={column.id}
+                data-column-title={column.title}
               >
                 <span class="column-status-dot"></span>
                 <button
@@ -1020,25 +1029,16 @@ defmodule DevloomWeb.BoardLive do
                                                                           else: "work items"}</small></button>
                 <div class="column-setting-actions">
                   <button
-                    id={"move-column-left-#{column.id}"}
-                    class="icon-button"
-                    phx-click="move_column"
-                    phx-value-id={column.id}
-                    phx-value-direction="left"
-                    disabled={column.id == @first_column_id}
-                    aria-label={"Move #{column.title} earlier"}
-                    title="Move earlier"
-                  ><.icon name="hero-chevron-up" class="size-3.5" /></button>
-                  <button
-                    id={"move-column-right-#{column.id}"}
-                    class="icon-button"
-                    phx-click="move_column"
-                    phx-value-id={column.id}
-                    phx-value-direction="right"
-                    disabled={column.id == @last_column_id}
-                    aria-label={"Move #{column.title} later"}
-                    title="Move later"
-                  ><.icon name="hero-chevron-down" class="size-3.5" /></button>
+                    id={"drag-column-#{column.id}"}
+                    type="button"
+                    class="icon-button column-drag-handle"
+                    data-column-drag-handle
+                    aria-label={"Reorder #{column.title}"}
+                    aria-describedby="column-reorder-help"
+                    aria-pressed="false"
+                    disabled={length(@columns) == 1}
+                    title="Drag to reorder"
+                  ><.icon name="hero-bars-3" class="size-4" /></button>
                   <button
                     id={"delete-column-#{column.id}"}
                     class="icon-button column-delete-button"

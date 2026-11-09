@@ -212,6 +212,34 @@ defmodule Devloom.Boards do
     end)
   end
 
+  @doc "Moves a column before another column, or to the end when before_id is nil."
+  def reorder_column(%Scope{} = scope, id, before_id) do
+    case authorized_board(scope) do
+      {:ok, board} -> reorder_column(board, id, before_id)
+      _ -> {:error, :unauthorized}
+    end
+  end
+
+  def reorder_column(%Board{} = board, id, before_id) do
+    mutate(board, fn ->
+      column = get_column(board, id) || Repo.rollback(:not_found)
+      before_id = cast_before_id!(before_id)
+      columns = list_columns(board)
+
+      if before_id && !Enum.any?(columns, &(&1.id == before_id)) do
+        Repo.rollback(:invalid_target)
+      end
+
+      if before_id != column.id do
+        remaining = Enum.reject(columns, &(&1.id == column.id))
+        index = Enum.find_index(remaining, &(&1.id == before_id)) || length(remaining)
+        remaining |> List.insert_at(index, column) |> write_column_positions()
+      end
+
+      get_column(board, column.id)
+    end)
+  end
+
   @doc "Deletes a column, moving its cards to an explicitly chosen destination when necessary."
   def delete_column(scope_or_board, column, destination_id \\ nil)
 
