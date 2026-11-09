@@ -51,14 +51,7 @@ export const ChatComposer = {
     this.refInput = this.el.querySelector("[name='message[client_ref]']")
     this.key = this.el.dataset.storageKey
 
-    try {
-      const draft = JSON.parse(sessionStorage.getItem(this.key) || "null")
-      if (draft?.body) {
-        this.bodyInput.value = draft.body
-        if (draft.clientRef) this.refInput.value = draft.clientRef
-      }
-      if (draft?.body) this.bodyInput.dispatchEvent(new Event("input", {bubbles: true}))
-    } catch (_) { /* Chat still works when browser storage is unavailable. */ }
+    this.restoreDraft()
 
     this.onInput = () => this.saveDraft()
     this.onKeydown = event => {
@@ -69,12 +62,37 @@ export const ChatComposer = {
     }
     this.el.addEventListener("input", this.onInput)
     this.el.addEventListener("keydown", this.onKeydown)
-    this.handleEvent("chat:sent", ({body}) => {
+    this.handleEvent("chat:sent", ({body, storage_key: storageKey}) => {
+      if (storageKey && storageKey !== this.key) return
       // Do not erase a new draft typed while the previous message was saving.
       if (this.bodyInput.value.trim() === body) this.bodyInput.value = ""
       this.saveDraft()
       this.bodyInput.focus({preventScroll: true})
     })
+  },
+
+  beforeUpdate() {
+    this.saveDraft()
+  },
+
+  updated() {
+    if (this.key !== this.el.dataset.storageKey) {
+      this.key = this.el.dataset.storageKey
+      this.bodyInput.value = ""
+      this.refInput.value = this.el.dataset.clientRef
+      this.restoreDraft()
+    }
+  },
+
+  restoreDraft() {
+    try {
+      const draft = JSON.parse(sessionStorage.getItem(this.key) || "null")
+      if (draft?.body) {
+        this.bodyInput.value = draft.body
+        if (draft.clientRef) this.refInput.value = draft.clientRef
+        this.bodyInput.dispatchEvent(new Event("input", {bubbles: true}))
+      }
+    } catch (_) { /* Browser storage is optional. */ }
   },
 
   saveDraft() {

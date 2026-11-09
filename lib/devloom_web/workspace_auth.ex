@@ -3,12 +3,15 @@ defmodule DevloomWeb.WorkspaceAuth do
   import Phoenix.Component
   import Phoenix.LiveView
 
-  alias Devloom.Workspaces
+  alias Devloom.{WorkspacePresence, Workspaces}
 
   def on_mount(:ensure_member, %{"workspace_id" => id}, _session, socket) do
     case Workspaces.fetch_scope(socket.assigns.current_scope, id) do
       {:ok, scope} ->
-        if connected?(socket), do: Workspaces.subscribe(scope)
+        if connected?(socket) do
+          Workspaces.subscribe(scope)
+          WorkspacePresence.track(scope)
+        end
 
         {:cont,
          socket
@@ -36,6 +39,8 @@ defmodule DevloomWeb.WorkspaceAuth do
   end
 
   defp deny_access(socket) do
+    WorkspacePresence.untrack(socket.assigns.current_scope)
+
     socket
     |> put_flash(:error, "This workspace is not available to your account.")
     |> push_navigate(to: "/workspaces")

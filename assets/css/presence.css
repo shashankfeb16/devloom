@@ -1,0 +1,11 @@
+.member-presence { display: inline-flex; align-items: center; gap: 5px; font-size: 10px; line-height: 1.5; color: #8b98ab; white-space: nowrap; }
+.presence-dot { display: inline-block; flex-shrink: 0; width: 6px; height: 6px; border-radius: 50%; background: #adb7c6; }
+.member-presence[data-online="true"] { color: #478267; }
+.member-presence[data-online="true"] .presence-dot { background: #35a578; box-shadow: 0 0 0 2px #35a5780c; }
+.workspace-member-details .member-presence { display: inline-flex; margin-top: 5px; font-size: 9px; }
+.workspace-message-member { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.workspace-message-member:hover { color: #2864e7; border-color: #dbe6fa; background: #f1f6ff; }
+@media (max-width: 700px) {
+  .workspace-member-details .member-presence { font-size: 8px; }
+  .workspace-member-row { gap: 8px; }
+}

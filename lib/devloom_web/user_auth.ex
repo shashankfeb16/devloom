@@ -113,6 +113,8 @@ defmodule DevloomWeb.UserAuth do
   end
 
   defp sign_in_redirect(socket) do
+    Devloom.WorkspacePresence.untrack(socket.assigns[:current_scope])
+
     socket
     |> LiveView.put_flash(:error, "Your session has ended. Sign in to continue.")
     |> LiveView.redirect(to: ~p"/users/log_in")

@@ -35,9 +35,24 @@ defmodule DevloomWeb.Layouts do
     <a href="#main-content" class="skip-link">Skip to content</a>
     <div class={["workspace-shell", @active_view == "chat" && "workspace-shell-chat"]}>
       <header class="workspace-topbar">
-        <.link navigate={~p"/workspaces"} class="brand" aria-label="Devloom home">
-          <img src={~p"/images/logo.svg"} alt="" width="29" height="29" /><span>devloom</span>
-        </.link>
+        <div class="workspace-brand-group">
+          <.link navigate={~p"/workspaces"} class="brand" aria-label="Devloom home">
+            <img src={~p"/images/logo.svg"} alt="" width="29" height="29" /><span>devloom</span>
+          </.link>
+          <button
+            id="sidebar-toggle"
+            type="button"
+            class="sidebar-toggle"
+            data-sidebar-toggle
+            aria-controls="workspace-sidebar"
+            aria-expanded="true"
+            aria-label="Collapse sidebar"
+            title="Collapse sidebar"
+          >
+            <.icon name="hero-chevron-double-left" class="sidebar-collapse-icon size-4" />
+            <.icon name="hero-chevron-double-right" class="sidebar-expand-icon size-4" />
+          </button>
+        </div>
         <nav class="breadcrumb" aria-label="Breadcrumb">
           <.link navigate={~p"/workspaces"}>Workspaces</.link>
           <.icon name="hero-chevron-right" class="size-3" />
@@ -102,8 +117,18 @@ defmodule DevloomWeb.Layouts do
           <.icon name="hero-user-group" class="size-4" />Members
         </.link>
       </nav>
-      <aside class="workspace-sidebar" aria-label="Workspace navigation">
-        <.link id="workspace-switcher" navigate={~p"/workspaces"} class="project-switcher">
+      <aside id="workspace-sidebar" class="workspace-sidebar" aria-label="Workspace navigation">
+        <.link
+          id="workspace-switcher"
+          navigate={~p"/workspaces"}
+          class="project-switcher"
+          aria-label={
+            if @workspace, do: "Switch workspace: #{@workspace.name}", else: "Choose a workspace"
+          }
+          title={
+            if @workspace, do: "Switch workspace: #{@workspace.name}", else: "Choose a workspace"
+          }
+        >
           <span class="project-avatar">{if @workspace, do: initials(@workspace.name), else: "D"}</span>
           <div>
             <strong>{if @workspace, do: @workspace.name, else: "Your workspaces"}</strong><span>Switch workspace</span>
@@ -117,6 +142,8 @@ defmodule DevloomWeb.Layouts do
             navigate={~p"/workspaces"}
             class={["nav-item", "workspace-chat-link", @active_view == "workspaces" && "active"]}
             aria-current={@active_view == "workspaces" && "page"}
+            aria-label="All workspaces"
+            title="All workspaces"
           >
             <.icon name="hero-squares-2x2" class="size-[18px]" /><span>All workspaces</span>
           </.link>
@@ -128,6 +155,8 @@ defmodule DevloomWeb.Layouts do
             navigate={~p"/workspaces/#{@workspace.id}/board"}
             class={["nav-item", "workspace-chat-link", @active_view == "board" && "active"]}
             aria-current={@active_view == "board" && "page"}
+            aria-label="Team board"
+            title="Team board"
           >
             <.icon name="hero-view-columns" class="size-4" /><span>Team board</span>
           </.link>
@@ -137,6 +166,8 @@ defmodule DevloomWeb.Layouts do
             navigate={~p"/workspaces/#{@workspace.id}/board?view=list"}
             class={["nav-item", "workspace-chat-link", @active_view == "list" && "active"]}
             aria-current={@active_view == "list" && "page"}
+            aria-label="Work items"
+            title="Work items"
           >
             <.icon name="hero-clipboard-document-list" class="size-4" /><span>Work items</span>
           </.link>
@@ -146,8 +177,10 @@ defmodule DevloomWeb.Layouts do
             navigate={~p"/workspaces/#{@workspace.id}/chat"}
             class={["nav-item", "workspace-chat-link", @active_view == "chat" && "active"]}
             aria-current={@active_view == "chat" && "page"}
+            aria-label="Chat"
+            title="Chat"
           >
-            <.icon name="hero-chat-bubble-left-right" class="size-[18px]" /><span>Team chat</span>
+            <.icon name="hero-chat-bubble-left-right" class="size-[18px]" /><span>Chat</span>
           </.link>
           <.link
             :if={@workspace}
@@ -155,14 +188,16 @@ defmodule DevloomWeb.Layouts do
             navigate={~p"/workspaces/#{@workspace.id}/members"}
             class={["nav-item", "workspace-chat-link", @active_view == "members" && "active"]}
             aria-current={@active_view == "members" && "page"}
+            aria-label="Members and invitations"
+            title="Members & invites"
           >
             <.icon name="hero-user-group" class="size-[18px]" /><span>Members &amp; invites</span>
           </.link>
           <div class="sidebar-rule"></div>
-          <div class="planned-nav-item" aria-disabled="true">
+          <div class="planned-nav-item" aria-disabled="true" title="Documentation — coming soon">
             <.icon name="hero-book-open" class="size-[18px]" /><span>Documentation</span><small>Soon</small>
           </div>
-          <div class="planned-nav-item" aria-disabled="true">
+          <div class="planned-nav-item" aria-disabled="true" title="Meetings — coming soon">
             <.icon name="hero-video-camera" class="size-[18px]" /><span>Meetings</span><small>Soon</small>
           </div>
         </nav>
@@ -177,8 +212,10 @@ defmodule DevloomWeb.Layouts do
             id="board-help"
             navigate={~p"/workspaces/#{@workspace.id}/board?help=1"}
             class="sidebar-help"
+            aria-label="Board help"
+            title="Board help"
           ><.icon name="hero-question-mark-circle" class="size-[18px]" /><span>Board help</span></.link>
-          <div class="sidebar-identity">
+          <div class="sidebar-identity" title={@current_scope.user.name}>
             <span class="identity-icon"><.icon name="hero-user" class="size-4" /></span><div>
               <strong>{@current_scope.user.name}</strong><span>{if @current_scope.membership,
                 do: String.capitalize(to_string(@current_scope.membership.role)),
@@ -198,7 +235,7 @@ defmodule DevloomWeb.Layouts do
     """
   end
 
-  defp view_title("chat"), do: "Team chat"
+  defp view_title("chat"), do: "Chat"
   defp view_title("members"), do: "Members"
   defp view_title("workspaces"), do: "Your workspaces"
   defp view_title("list"), do: "Work items"
