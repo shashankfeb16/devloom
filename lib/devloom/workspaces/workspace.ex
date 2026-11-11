@@ -8,7 +8,7 @@ defmodule Devloom.Workspaces.Workspace do
     field :slug, :string
     field :legacy, :boolean, default: false
     field :legacy_claimed, :boolean, default: false
-    field :role, Ecto.Enum, values: [:owner, :member], virtual: true
+    field :role, Ecto.Enum, values: [:owner, :admin, :member], virtual: true
     field :member_count, :integer, virtual: true, default: 0
     has_many :memberships, Devloom.Workspaces.Membership
     has_many :boards, Devloom.Boards.Board

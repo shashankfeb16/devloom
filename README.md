@@ -18,7 +18,15 @@ Open a workspace and select **Members & invites**. Owners can enter an email add
 
 Members can use the workspace board and chat and see the team directory. Owners can invite or remove members. Removing someone ends their access to that workspace, including already-open board and chat sessions; their existing work and messages remain. Owners cannot remove themselves.
 
-Invitation links are shown once to the owner and only token hashes are stored in the database. Email delivery is not configured: share the generated links yourself. Email verification, password recovery, workspace deletion, and ownership transfer are not implemented in this increment.
+Invitation links are shown once to the owner and only token hashes are stored in the database. Email delivery is not configured: share the generated links yourself. Email verification, password recovery, and ownership transfer are not implemented in this increment.
+
+### Delete a workspace
+
+On **Your workspaces**, owners and admins can select **Delete** on a workspace card. The confirmation dialog explains what will be removed and requires the exact workspace name before deletion. Select **Keep workspace** or press Escape to cancel.
+
+Deletion permanently removes the workspace, its boards, workflow columns, work items, team chat, private conversations and messages, memberships, and invitations in one database transaction. Other workspaces and user accounts remain intact. Already-open board, chat, and member pages return to **Your workspaces** when deletion completes. Permissions are checked again when confirming, so a removed or demoted member cannot delete from an old dialog.
+
+Workspace memberships support owner, admin, and member roles. Admins can delete their workspace; invitations and membership management remain owner-only. New invitations create members. Assigning admin roles through the interface is not implemented.
 
 ## Use the Kanban board
 

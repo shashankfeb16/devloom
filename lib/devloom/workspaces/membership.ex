@@ -3,7 +3,7 @@ defmodule Devloom.Workspaces.Membership do
   use Ecto.Schema
 
   schema "workspace_memberships" do
-    field :role, Ecto.Enum, values: [:owner, :member], default: :member
+    field :role, Ecto.Enum, values: [:owner, :admin, :member], default: :member
     belongs_to :workspace, Devloom.Workspaces.Workspace
     belongs_to :user, Devloom.Accounts.User
     timestamps(type: :utc_datetime)
