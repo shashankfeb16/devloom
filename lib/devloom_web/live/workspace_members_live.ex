@@ -196,12 +196,13 @@ defmodule DevloomWeb.WorkspaceMembersLive do
                                                                               do: "Online",
                                                                               else: "Offline"}</span>
                   </div>
-                  <span class={["workspace-role", member.role == :owner && "is-owner"]}>{if member.role ==
-                                                                                              :owner,
-                                                                                            do:
-                                                                                              "Owner",
-                                                                                            else:
-                                                                                              "Member"}</span>
+                  <span class={[
+                    "workspace-role",
+                    member.role == :owner && "is-owner",
+                    member.role == :admin && "is-admin"
+                  ]}>
+                    {String.capitalize(to_string(member.role))}
+                  </span>
                   <.link
                     :if={member.user_id != @current_scope.user.id}
                     id={"message-member-#{member.user_id}"}

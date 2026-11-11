@@ -109,6 +109,38 @@ defmodule Devloom.Workspaces do
 
   def owner?(_scope), do: false
 
+  @doc "Whether the account currently has workspace deletion privileges."
+  def can_delete_workspace?(%Scope{workspace: %Workspace{id: id}} = scope) do
+    case fetch_scope(scope, id) do
+      {:ok, %Scope{membership: %Membership{role: role}}} when role in [:owner, :admin] -> true
+      _ -> false
+    end
+  end
+
+  def can_delete_workspace?(_scope), do: false
+
+  @doc "Permanently deletes a workspace and its related records for a current owner or admin."
+  def delete_workspace(%Scope{user: %User{}, workspace: %Workspace{id: id}} = scope) do
+    result =
+      Repo.transaction(fn ->
+        workspace = lock_workspace!(id)
+
+        case fetch_scope(scope, id) do
+          {:ok, %Scope{membership: %Membership{role: role}}} when role in [:owner, :admin] ->
+            # Database foreign keys cascade through boards, work items, team and
+            # direct chats, invitations and memberships within this transaction.
+            Repo.delete!(workspace)
+
+          _ ->
+            Repo.rollback(:forbidden)
+        end
+      end)
+
+    broadcast_membership(result)
+  end
+
+  def delete_workspace(_scope), do: {:error, :forbidden}
+
   def subscribe(%Scope{workspace: %Workspace{id: id}} = scope) do
     if authorized_scope?(scope) do
       Phoenix.PubSub.subscribe(Devloom.PubSub, topic(id))
