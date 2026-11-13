@@ -2,7 +2,7 @@
 
 Devloom is the working name for a shared developer workspace: one place to organize work and preserve the discussions and knowledge around it.
 
-Devloom uses Phoenix, LiveView, and PostgreSQL for accounts, separate team workspaces, Kanban boards, and persistent team chat.
+Devloom uses Phoenix, LiveView, and PostgreSQL for accounts, separate team workspaces, Kanban boards, shared whiteboards, and persistent team chat.
 
 ## Accounts and workspaces
 
@@ -24,7 +24,7 @@ Invitation links are shown once to the owner and only token hashes are stored in
 
 On **Your workspaces**, owners and admins can select **Delete** on a workspace card. The confirmation dialog explains what will be removed and requires the exact workspace name before deletion. Select **Keep workspace** or press Escape to cancel.
 
-Deletion permanently removes the workspace, its boards, workflow columns, work items, team chat, private conversations and messages, memberships, and invitations in one database transaction. Other workspaces and user accounts remain intact. Already-open board, chat, and member pages return to **Your workspaces** when deletion completes. Permissions are checked again when confirming, so a removed or demoted member cannot delete from an old dialog.
+Deletion permanently removes the workspace, its boards, whiteboard, workflow columns, work items, team chat, private conversations and messages, memberships, and invitations in one database transaction. Other workspaces and user accounts remain intact. Already-open board, whiteboard, chat, and member pages return to **Your workspaces** when deletion completes. Permissions are checked again when confirming, so a removed or demoted member cannot delete from an old dialog.
 
 Workspace memberships support owner, admin, and member roles. Admins can delete their workspace; invitations and membership management remain owner-only. New invitations create members. Assigning admin roles through the interface is not implemented.
 
@@ -50,6 +50,30 @@ Existing boards keep their workflow and cards when the migration runs. Removed d
 Changes persist in PostgreSQL. Open the same board in two browser tabs to see creates, edits, deletes, and moves synchronize without refreshing. Phoenix PubSub publishes changes after transactions commit. Board-level database locks keep simultaneous moves ordered, and version checks prevent an older editor from overwriting a newer change. A stale editor keeps its draft and offers to load the latest version.
 
 All board reads, edits, and live subscriptions resolve the signed-in user's current workspace membership. Assignees remain editable text names. The development server is published only on localhost by default; teammates on other computers need a shared deployment.
+
+## Use the whiteboard
+
+Select **Whiteboard** in a workspace's sidebar or mobile navigation. Each workspace has one shared canvas, initially empty, for diagrams, architecture sketches, and brainstorming. Select its name to rename it.
+
+- Draw rectangles, diamonds, ellipses, lines, arrows, or freehand strokes. Add text and sticky notes by clicking on the canvas. Press Enter to finish text, Shift+Enter for a new line, or Escape to cancel. Double-click text or a note to edit it.
+- Use **Select** to move a drawing or resize it with its corner handles. Adjust stroke and background colors, stroke width, solid/dashed/dotted lines, sketch style, rounded edges, and opacity in **Style**. Duplicate or delete a selected element, or use the eraser to remove drawings.
+- Undo and redo with the bottom controls or Ctrl/⌘+Z and Ctrl/⌘+Shift+Z. Hold Space and drag to pan; use Ctrl/⌘+scroll or the zoom buttons to zoom. Click the percentage to fit the drawing to the canvas. The grid can be toggled.
+- **Export** downloads an SVG image or an editable Devloom JSON drawing. Import accepts Devloom JSON files; replacing or clearing an existing drawing asks for confirmation and can be undone in the current session. Excalidraw file imports are not supported.
+
+Changes autosave to PostgreSQL and appear in other open workspace canvases. If two people edit at once, a revision check preserves the newer saved drawing and retains the other person's draft. The editor offers **Load latest** or **Use my draft**; replacing the shared version requires confirmation. This is shared board synchronization, without live cursors or simultaneous element merging.
+
+An unsaved draft is kept in the browser separately for each account and workspace when browser storage is available. After a disconnect, the editor checks the latest saved version before retrying. Save status appears below the canvas. Undo history and viewport position belong to the current session. Drawings support up to 1,000 elements and 2 MB of scene data.
+
+Existing workspace membership checks protect every whiteboard read and write. Removing a member, revoking their session, or deleting a workspace also ends their connected whiteboard access. Deleting a workspace removes its whiteboard.
+
+After updating an existing local stack, apply the migration and build the assets:
+
+```sh
+docker compose exec web mix ecto.migrate
+docker compose exec web mix assets.build
+```
+
+The whiteboard adds no package dependencies. Run its browser-side geometry and synchronization tests with `node --test test/js/whiteboard_*_test.mjs`; Phoenix persistence and LiveView tests are part of `mix precommit`.
 
 ## Use Team chat
 
