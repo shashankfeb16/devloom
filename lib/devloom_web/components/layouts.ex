@@ -33,7 +33,11 @@ defmodule DevloomWeb.Layouts do
 
     ~H"""
     <a href="#main-content" class="skip-link">Skip to content</a>
-    <div class={["workspace-shell", @active_view == "chat" && "workspace-shell-chat"]}>
+    <div class={[
+      "workspace-shell",
+      @active_view == "chat" && "workspace-shell-chat",
+      @active_view == "whiteboard" && "workspace-shell-whiteboard"
+    ]}>
       <header class="workspace-topbar">
         <div class="workspace-brand-group">
           <.link navigate={~p"/workspaces"} class="brand" aria-label="Devloom home">
@@ -99,6 +103,14 @@ defmodule DevloomWeb.Layouts do
           class={@active_view in ["board", "list"] && "active"}
         >
           <.icon name="hero-view-columns" class="size-4" />Board
+        </.link>
+        <.link
+          :if={@workspace}
+          id="mobile-nav-whiteboard"
+          navigate={~p"/workspaces/#{@workspace.id}/whiteboard"}
+          class={@active_view == "whiteboard" && "active"}
+        >
+          <.icon name="hero-pencil-square" class="size-4" />Whiteboard
         </.link>
         <.link
           :if={@workspace}
@@ -173,6 +185,17 @@ defmodule DevloomWeb.Layouts do
           </.link>
           <.link
             :if={@workspace}
+            id="nav-whiteboard"
+            navigate={~p"/workspaces/#{@workspace.id}/whiteboard"}
+            class={["nav-item", "workspace-chat-link", @active_view == "whiteboard" && "active"]}
+            aria-current={@active_view == "whiteboard" && "page"}
+            aria-label="Whiteboard"
+            title="Whiteboard"
+          >
+            <.icon name="hero-pencil-square" class="size-[18px]" /><span>Whiteboard</span>
+          </.link>
+          <.link
+            :if={@workspace}
             id="nav-chat"
             navigate={~p"/workspaces/#{@workspace.id}/chat"}
             class={["nav-item", "workspace-chat-link", @active_view == "chat" && "active"]}
@@ -226,7 +249,11 @@ defmodule DevloomWeb.Layouts do
       </aside>
       <main
         id="main-content"
-        class={["workspace-content", @active_view == "chat" && "workspace-content-chat"]}
+        class={[
+          "workspace-content",
+          @active_view == "chat" && "workspace-content-chat",
+          @active_view == "whiteboard" && "workspace-content-whiteboard"
+        ]}
       >
         {render_slot(@inner_block)}
       </main>
@@ -236,6 +263,7 @@ defmodule DevloomWeb.Layouts do
   end
 
   defp view_title("chat"), do: "Chat"
+  defp view_title("whiteboard"), do: "Whiteboard"
   defp view_title("members"), do: "Members"
   defp view_title("workspaces"), do: "Your workspaces"
   defp view_title("list"), do: "Work items"

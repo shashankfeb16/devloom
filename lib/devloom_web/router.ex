@@ -48,6 +48,7 @@ defmodule DevloomWeb.Router do
         {DevloomWeb.WorkspaceAuth, :ensure_member}
       ] do
       live "/workspaces/:workspace_id/board", BoardLive
+      live "/workspaces/:workspace_id/whiteboard", WhiteboardLive
       live "/workspaces/:workspace_id/chat", ChatLive, :team
       live "/workspaces/:workspace_id/chat/direct/:member_id", ChatLive, :direct
       live "/workspaces/:workspace_id/members", WorkspaceMembersLive
