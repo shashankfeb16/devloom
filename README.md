@@ -4,6 +4,8 @@ Devloom is the working name for a shared developer workspace: one place to organ
 
 Devloom uses Phoenix, LiveView, and PostgreSQL for accounts, separate team workspaces, Kanban boards, shared whiteboards, and persistent team chat.
 
+For production hosting, see [Deploy to a Hostinger VPS](docs/hostinger-vps.md). The Terraform setup in `infra/hostinger` can be validated before buying a server; deployment starts disabled.
+
 ## Accounts and workspaces
 
 Open [http://localhost:4000](http://localhost:4000). Create an account with your name, email, and password, or sign in to an existing account. Passwords require at least 12 characters and are hashed with bcrypt. Sessions use expiring, revocable database tokens; signing out ends that browser session and disconnects its open live views.

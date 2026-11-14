@@ -1,0 +1,78 @@
+name: devloom-production
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  db:
+    image: postgres:17-alpine@sha256:3540c0362c809df084ffac0ae69fe794515f9de92692f02178bcdce0ef0302ac
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER in the production environment file}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in the production environment file}
+      POSTGRES_DB: ${POSTGRES_DB:?Set POSTGRES_DB in the production environment file}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 5s
+      timeout: 5s
+      retries: 24
+      start_period: 10s
+    logging: *logging
+
+  web:
+    image: devloom-production:${RELEASE_ID:-local}
+    build:
+      context: ${DEVLOOM_SOURCE_DIR:-.}
+      dockerfile: Dockerfile.production
+    init: true
+    restart: unless-stopped
+    env_file:
+      - ${DEVLOOM_ENV_FILE:?Set DEVLOOM_ENV_FILE to the absolute production environment file path}
+    environment:
+      PHX_SERVER: "true"
+      PORT: "4000"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "--max-time", "6", "http://localhost:4000/health"]
+      interval: 5s
+      timeout: 8s
+      retries: 24
+      start_period: 20s
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    logging: *logging
+
+  caddy:
+    image: caddy:2.11.9-alpine@sha256:003a97808e781aa9f7e75cc2f43d34d461099031faf5e20faefb9f61126836f0
+    restart: unless-stopped
+    environment:
+      DEVLOOM_DOMAIN: ${DEVLOOM_DOMAIN:?Set DEVLOOM_DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL:?Set ACME_EMAIL}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ${DEVLOOM_CADDYFILE:-./docker/Caddyfile}:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      web:
+        condition: service_healthy
+    logging: *logging
+
+volumes:
+  pgdata:
+    name: devloom-production_pgdata
+  caddy_data:
+    name: devloom-production_caddy_data
+  caddy_config:
+    name: devloom-production_caddy_config
