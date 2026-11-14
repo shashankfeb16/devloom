@@ -1,0 +1,26 @@
+FROM docker:28.4.0-cli AS dockercli
+FROM node:24-bookworm-slim AS node
+FROM hashicorp/terraform:1.14.9 AS terraform
+FROM jenkins/inbound-agent:jdk21
+
+USER root
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+       bash ca-certificates curl git openssh-client python3 util-linux \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=dockercli /usr/local/bin/docker /usr/local/bin/docker
+COPY --from=dockercli /usr/local/libexec/docker/cli-plugins/ /usr/local/libexec/docker/cli-plugins/
+COPY --from=node /usr/local/bin/node /usr/local/bin/node
+COPY --from=terraform /bin/terraform /usr/local/bin/terraform
+COPY start-agent.sh /usr/local/bin/devloom-start-agent
+RUN chmod 0755 /usr/local/bin/devloom-start-agent
+
+ENV HOME=/home/jenkins \
+    TMPDIR=/tmp/devloom-ci \
+    TF_IN_AUTOMATION=true \
+    TF_INPUT=false
+
+# The entrypoint fixes empty named-volume ownership, then drops to the Jenkins
+# user before connecting. No build command runs as root in this container.
+ENTRYPOINT ["/usr/local/bin/devloom-start-agent"]

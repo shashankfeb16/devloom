@@ -44,3 +44,8 @@ Thumbs.db
 .idea/
 .vscode/
 
+# Private Jenkins deployment plans and local credential files.
+/.jenkins-deploy/
+/infra/jenkins/deploy/production.tfvars.json
+__pycache__/
+

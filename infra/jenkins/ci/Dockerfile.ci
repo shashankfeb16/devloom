@@ -1,0 +1,24 @@
+# Test the same Elixir/OTP versions used by Devloom's production release.
+FROM elixir:1.19.7-otp-28-slim@sha256:b0082436839969c6eac09ee99515980322d8ecadd302ff7b9fd6547aa24cddf9
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends build-essential git ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV MIX_ENV=test \
+    HEX_CACERTS_PATH=/etc/ssl/certs/ca-certificates.crt
+WORKDIR /app
+RUN mix local.hex --force && mix local.rebar --force
+
+COPY mix.exs mix.lock ./
+RUN mix deps.get --check-locked
+COPY config ./config
+RUN mix deps.compile
+COPY .formatter.exs ./
+COPY lib ./lib
+COPY assets ./assets
+COPY priv ./priv
+COPY test ./test
+RUN mix assets.setup && mix assets.build
+
+CMD ["mix", "test"]

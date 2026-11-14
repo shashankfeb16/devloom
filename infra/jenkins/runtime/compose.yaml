@@ -1,0 +1,85 @@
+name: devloom-jenkins
+
+services:
+  controller:
+    image: devloom-jenkins-controller:local
+    build:
+      context: .
+      dockerfile: Dockerfile.controller
+    restart: unless-stopped
+    environment:
+      JAVA_OPTS: -Djenkins.install.runSetupWizard=false -Xms256m -Xmx1024m
+      JENKINS_ADMIN_USER: ${JENKINS_ADMIN_USER:-admin}
+      JENKINS_ADMIN_PASSWORD: ${JENKINS_ADMIN_PASSWORD:?Run bash infra/jenkins/runtime/jenkins.sh init first}
+      JENKINS_PUBLIC_URL: http://localhost:${JENKINS_PORT:-8080}/
+    ports:
+      - "127.0.0.1:${JENKINS_PORT:-8080}:8080"
+    volumes:
+      - jenkins-home:/var/jenkins_home
+      - agent-secret:/run/devloom-agent
+    healthcheck:
+      test: [CMD, curl, --fail, --silent, --max-time, "5", http://localhost:8080/login]
+      interval: 10s
+      timeout: 6s
+      retries: 30
+      start_period: 60s
+
+  docker:
+    image: docker:28.4.0-dind
+    privileged: true
+    restart: unless-stopped
+    environment:
+      DOCKER_TLS_CERTDIR: /certs
+    volumes:
+      - docker-data:/var/lib/docker
+      - docker-certs:/certs/client
+      - agent-work:/home/jenkins/agent
+      # DinD mounts a tmpfs over /tmp unless /tmp itself is already a mount.
+      # Mount the whole directory so it cannot hide the shared smoke-test files.
+      - agent-tmp:/tmp
+    healthcheck:
+      test: [CMD, docker, info]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+  agent:
+    image: devloom-jenkins-agent:local
+    build:
+      context: .
+      dockerfile: Dockerfile.agent
+    restart: unless-stopped
+    init: true
+    # Smoke-test ports belong to the nested daemon. Sharing its network makes
+    # localhost reach them from the agent, without publishing them on the Mac.
+    network_mode: service:docker
+    environment:
+      JENKINS_URL: http://controller:8080/
+      JENKINS_AGENT_NAME: devloom-agent
+      JENKINS_AGENT_WORKDIR: /home/jenkins/agent
+      JENKINS_WEB_SOCKET: "true"
+      DOCKER_HOST: tcp://docker:2376
+      DOCKER_TLS_VERIFY: "1"
+      DOCKER_CERT_PATH: /certs/client
+      DEVLOOM_TF_STATE_DIR: /var/lib/devloom-terraform
+    volumes:
+      - agent-work:/home/jenkins/agent
+      - agent-tmp:/tmp
+      - agent-secret:/run/devloom-agent:ro
+      - docker-certs:/certs/client:ro
+      - terraform-state:/var/lib/devloom-terraform
+    depends_on:
+      controller:
+        condition: service_healthy
+      docker:
+        condition: service_healthy
+
+volumes:
+  jenkins-home:
+  agent-secret:
+  agent-work:
+  agent-tmp:
+  docker-data:
+  docker-certs:
+  terraform-state:

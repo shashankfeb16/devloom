@@ -1,0 +1,32 @@
+# Always pass a unique -p devloom-ci-... value via run.sh.
+# No host ports, existing volumes, production environment files, or source mounts.
+services:
+  db:
+    image: postgres:17-alpine@sha256:3540c0362c809df084ffac0ae69fe794515f9de92692f02178bcdce0ef0302ac
+    environment:
+      POSTGRES_USER: devloom_ci
+      POSTGRES_PASSWORD: local_ci_only
+      POSTGRES_DB: devloom_ci
+    volumes:
+      - database:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U devloom_ci -d devloom_ci"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+      start_period: 5s
+
+  test:
+    image: devloom-ci:${CI_PROJECT_NAME:?Run through infra/jenkins/ci/run.sh}
+    environment:
+      MIX_ENV: test
+      POSTGRES_HOST: db
+      POSTGRES_USER: devloom_ci
+      POSTGRES_PASSWORD: local_ci_only
+      POSTGRES_DB: devloom_ci
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  database:

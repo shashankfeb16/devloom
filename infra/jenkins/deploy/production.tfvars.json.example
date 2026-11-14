@@ -1,0 +1,10 @@
+{
+  "deploy_enabled": true,
+  "vps_host": "203.0.113.10",
+  "ssh_user": "root",
+  "ssh_port": 22,
+  "ssh_host_key": "ssh-ed25519 REPLACE_WITH_VERIFIED_SERVER_HOST_PUBLIC_KEY",
+  "domain": "devloom.example.com",
+  "acme_email": "you@example.com",
+  "deployment_revision": "1"
+}
