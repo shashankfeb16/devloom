@@ -21,3 +21,5 @@ docs
 *.tfvars.json
 *.pem
 *.key
+.jenkins-deploy
+Jenkinsfile

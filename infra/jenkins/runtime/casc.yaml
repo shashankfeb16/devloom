@@ -1,0 +1,30 @@
+jenkins:
+  systemMessage: "Devloom local CI/CD. Builds run on the separate devloom-agent."
+  numExecutors: 0
+  mode: EXCLUSIVE
+  securityRealm:
+    local:
+      allowsSignup: false
+      users:
+        - id: "${JENKINS_ADMIN_USER}"
+          password: "${JENKINS_ADMIN_PASSWORD}"
+  authorizationStrategy:
+    loggedInUsersCanDoAnything:
+      allowAnonymousRead: false
+  nodes:
+    - permanent:
+        name: devloom-agent
+        remoteFS: /home/jenkins/agent
+        numExecutors: 1
+        labelString: devloom-docker
+        mode: EXCLUSIVE
+        launcher:
+          inbound:
+            workDirSettings:
+              disabled: false
+              failIfWorkDirIsMissing: false
+              internalDir: remoting
+
+unclassified:
+  location:
+    url: "${JENKINS_PUBLIC_URL}"

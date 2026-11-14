@@ -1,0 +1,9 @@
+configuration-as-code
+workflow-aggregator
+git
+github-branch-source
+credentials-binding
+ssh-agent
+timestamper
+pipeline-stage-view
+lockable-resources
