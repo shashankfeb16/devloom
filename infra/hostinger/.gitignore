@@ -1,0 +1,10 @@
+.terraform/
+.generated/
+*.tfstate
+*.tfstate.*
+*.tfvars
+*.tfvars.json
+*.tfplan
+crash.log
+__pycache__/
+# Keep .terraform.lock.hcl if providers are added in the future.
