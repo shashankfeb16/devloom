@@ -259,3 +259,7 @@ Windows and native AMD64 execution have not been tested on physical machines. Th
 ## References
 
 [Phoenix installation](https://hexdocs.pm/phoenix/installation.html), [Phoenix LiveView](https://hexdocs.pm/phoenix_live_view/Phoenix.LiveView.html), [Docker Desktop on macOS](https://docs.docker.com/desktop/setup/install/mac-install/), [Docker Desktop on Windows](https://docs.docker.com/desktop/setup/install/windows-install/), and [Compose readiness and startup order](https://docs.docker.com/compose/how-tos/startup-order/).
+
+## Test
+
+Testing jekins automated CI/CD works or not
