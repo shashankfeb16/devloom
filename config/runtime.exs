@@ -23,6 +23,20 @@ end
 config :devloom, DevloomWeb.Endpoint,
   http: [port: String.to_integer(System.get_env("PORT", "4000"))]
 
+# The metrics listener is separate from the public Phoenix endpoint. The local
+# observability Compose overlay enables it without publishing its port.
+config :devloom, :observability,
+  enabled: config_env() != :test and System.get_env("OBSERVABILITY_ENABLED") in ~w(true 1),
+  port: String.to_integer(System.get_env("METRICS_PORT", "9568"))
+
+if System.get_env("LOG_FORMAT") == "json" do
+  config :logger, :default_formatter,
+    format: {Devloom.Observability.LogFormatter, :format},
+    metadata: [:request_id, :method, :route, :status, :duration_ms],
+    colors: [enabled: false],
+    utc_log: true
+end
+
 if config_env() == :dev do
   # Reload browser tabs when matching files change.
   config :devloom, DevloomWeb.Endpoint,

@@ -12,9 +12,14 @@ defmodule DevloomWeb.Telemetry do
       # Telemetry poller will execute the given period measurements
       # every 10_000ms. Learn more here: https://telemetry-metrics.hexdocs.pm
       {:telemetry_poller, measurements: periodic_measurements(), period: 10_000}
-      # Add reporters as children of your supervision tree.
-      # {Telemetry.Metrics.ConsoleReporter, metrics: metrics()}
     ]
+
+    children =
+      if Application.get_env(:devloom, :observability, [])[:enabled] do
+        children ++ [Devloom.Observability.Supervisor]
+      else
+        children
+      end
 
     Supervisor.init(children, strategy: :one_for_one)
   end
