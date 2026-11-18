@@ -51,5 +51,5 @@ defmodule DevloomWeb.Endpoint do
   plug Plug.MethodOverride
   plug Plug.Head
   plug Plug.Session, @session_options
-  plug DevloomWeb.Router
+  plug Devloom.Observability.RequestMetrics, router: DevloomWeb.Router
 end

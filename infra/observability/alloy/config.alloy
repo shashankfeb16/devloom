@@ -1,0 +1,120 @@
+logging {
+  level = "info"
+}
+
+discovery.docker "local" {
+  host             = "unix:///var/run/docker.sock"
+  refresh_interval = "10s"
+}
+
+// Collect only this Compose project's Phoenix container, including restarts.
+discovery.relabel "devloom_logs" {
+  targets = discovery.docker.local.targets
+
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_project"]
+    regex         = sys.env("COMPOSE_PROJECT_NAME")
+    action        = "keep"
+  }
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    regex         = "web"
+    action        = "keep"
+  }
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_oneoff"]
+    regex         = "False|false"
+    action        = "keep"
+  }
+}
+
+loki.source.docker "devloom" {
+  host       = "unix:///var/run/docker.sock"
+  targets    = discovery.relabel.devloom_logs.output
+  labels     = { app = "devloom", environment = "local", service = "web" }
+  forward_to = [loki.process.devloom.receiver]
+}
+
+loki.process "devloom" {
+  // Preserve the JSON line (including stack traces/request_id) for Explore.
+  // Only severity becomes an indexed label; URLs, IDs and messages do not.
+  stage.json {
+    expressions = { level = "level" }
+  }
+  stage.labels {
+    values = { level = "" }
+  }
+  forward_to = [loki.write.local.receiver]
+}
+
+loki.write "local" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}
+
+prometheus.exporter.cadvisor "containers" {
+  // Docker Desktop's containerd image store uses this socket inside its Linux VM.
+  containerd_host               = "/rootfs/run/containerd/containerd.sock"
+  docker_only                   = true
+  disable_root_cgroup_stats      = true
+  enabled_metrics               = ["cpu", "memory"]
+  store_container_labels        = false
+  allowlisted_container_labels  = ["com.docker.compose.project", "com.docker.compose.service", "com.docker.compose.oneoff"]
+}
+
+prometheus.scrape "containers" {
+  targets         = prometheus.exporter.cadvisor.containers.targets
+  job_name        = "cadvisor"
+  scrape_interval = "15s"
+  // Use scrape time so stopped/recreated containers become stale promptly.
+  honor_timestamps = false
+  forward_to      = [prometheus.relabel.devloom_containers.receiver]
+}
+
+prometheus.relabel "devloom_containers" {
+  forward_to = [prometheus.remote_write.local.receiver]
+
+  // Embedded exporters supply their own job label; keep dashboard queries stable.
+  rule {
+    target_label = "job"
+    replacement  = "cadvisor"
+  }
+  rule {
+    source_labels = ["container_label_com_docker_compose_project"]
+    regex         = sys.env("COMPOSE_PROJECT_NAME")
+    action        = "keep"
+  }
+  rule {
+    source_labels = ["container_label_com_docker_compose_service"]
+    regex         = "web|db"
+    action        = "keep"
+  }
+  rule {
+    source_labels = ["container_label_com_docker_compose_oneoff"]
+    regex         = "False|false"
+    action        = "keep"
+  }
+  rule {
+    source_labels = ["container_label_com_docker_compose_service"]
+    target_label  = "service"
+  }
+  rule {
+    source_labels = ["container_label_com_docker_compose_project"]
+    target_label  = "compose_project"
+  }
+  rule {
+    target_label = "app"
+    replacement  = "devloom"
+  }
+  rule {
+    target_label = "environment"
+    replacement  = "local"
+  }
+}
+
+prometheus.remote_write "local" {
+  endpoint {
+    url = "http://prometheus:9090/api/v1/write"
+  }
+}

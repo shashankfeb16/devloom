@@ -8,6 +8,8 @@ For production hosting, see [Deploy to a Hostinger VPS](docs/hostinger-vps.md). 
 
 For local CI/CD, see [Run Jenkins on your Mac](docs/jenkins.md). The separate Docker service runs Devloom's checks and production smoke test, with optional approved VPS deployments over SSH.
 
+For local CPU/RAM charts, endpoint latency, errors, and searchable Phoenix logs, see [Local observability with Prometheus, Grafana, and Loki](docs/observability.md). The optional Compose overlay provisions the collectors, data sources, dashboard, and alert rules.
+
 ## Accounts and workspaces
 
 Open [http://localhost:4000](http://localhost:4000). Create an account with your name, email, and password, or sign in to an existing account. Passwords require at least 12 characters and are hashed with bcrypt. Sessions use expiring, revocable database tokens; signing out ends that browser session and disconnects its open live views.

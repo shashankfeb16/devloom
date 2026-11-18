@@ -1,0 +1,25 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    environment: local
+
+rule_files:
+  - /etc/prometheus/alerts.yml
+
+scrape_configs:
+  - job_name: devloom
+    static_configs:
+      - targets: [web:9568]
+        labels:
+          app: devloom
+          environment: local
+  - job_name: prometheus
+    static_configs:
+      - targets: [localhost:9090]
+  - job_name: alloy
+    static_configs:
+      - targets: [alloy:12345]
+
+# Alloy scrapes its embedded cAdvisor and sends the filtered web/db metrics to
+# /api/v1/write. The receiver is enabled by this local Compose overlay only.

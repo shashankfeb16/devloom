@@ -1,0 +1,48 @@
+groups:
+  - name: devloom-local
+    rules:
+      - alert: DevloomMetricsUnavailable
+        expr: up{job="devloom"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: Devloom metrics have been unavailable for one minute
+          description: Check the web container and its internal metrics listener on port 9568.
+      - alert: DevloomHighErrorRate
+        expr: |
+          (
+            sum(rate(devloom_http_requests_total{job="devloom",status=~"5.."}[5m]))
+            /
+            sum(rate(devloom_http_requests_total{job="devloom"}[5m]))
+          ) > 0.05
+          and sum(increase(devloom_http_requests_total{job="devloom"}[5m])) >= 20
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: More than 5% of Devloom requests return 5xx
+          description: Inspect endpoint metrics and error logs in Grafana. Requires at least 20 requests in five minutes.
+      - alert: DevloomSlowEndpoint
+        expr: |
+          histogram_quantile(0.95,
+            sum by (le, method, route) (
+              rate(devloom_http_request_duration_seconds_bucket{job="devloom"}[5m])
+            )
+          ) > 0.5
+          and on (method, route)
+            sum by (method, route) (increase(devloom_http_request_duration_seconds_count{job="devloom"}[5m])) >= 20
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: A Devloom endpoint has p95 latency above 500 ms
+          description: "{{ $labels.method }} {{ $labels.route }} is slow. Requires at least 20 requests in five minutes."
+      - alert: DevloomContainerMetricsUnavailable
+        expr: absent(container_memory_working_set_bytes{job="cadvisor",app="devloom",service="web"})
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: Devloom container resource metrics are missing
+          description: Check Alloy logs and Docker cgroup mounts. Docker Desktop exposes Linux VM containers rather than native macOS metrics.
