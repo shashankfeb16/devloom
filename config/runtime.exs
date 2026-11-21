@@ -36,6 +36,10 @@ if config_env() != :test do
     access_key_id: System.get_env("RECORDINGS_S3_ACCESS_KEY_ID"),
     secret_access_key: System.get_env("RECORDINGS_S3_SECRET_ACCESS_KEY"),
     endpoint: System.get_env("RECORDINGS_S3_ENDPOINT")
+
+  config :devloom, Devloom.Meetings.Transcripts,
+    url: System.get_env("TRANSCRIPTION_URL"),
+    secret: System.get_env("TRANSCRIPTION_SECRET")
 end
 
 # The metrics listener is separate from the public Phoenix endpoint. The local

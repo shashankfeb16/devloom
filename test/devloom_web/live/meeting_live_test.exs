@@ -6,7 +6,7 @@ defmodule DevloomWeb.MeetingLiveTest do
 
   alias Devloom.Accounts.Scope
   alias Devloom.Meetings
-  alias Devloom.Meetings.{LiveKit, Meeting}
+  alias Devloom.Meetings.{LiveKit, Meeting, Transcripts}
   alias Devloom.Workspaces
 
   setup %{conn: conn} do
@@ -107,6 +107,85 @@ defmodule DevloomWeb.MeetingLiveTest do
     assert Meetings.active(owner) == nil
   end
 
+  test "only a connected host or workspace owner can start a room transcript", %{
+    conn: conn,
+    scope: owner,
+    workspace: workspace
+  } do
+    Application.put_env(:devloom, Transcripts,
+      url: "https://transcriber.example.com",
+      secret: "transcription-test",
+      request_options: [plug: {Req.Test, :transcription}]
+    )
+
+    on_exit(fn -> Application.delete_env(:devloom, Transcripts) end)
+    Req.Test.stub(__MODULE__, &Req.Test.json(&1, %{}))
+
+    {:ok, host, _} = live(conn, path(workspace))
+    {:ok, member, _} = live(invite_member(owner), path(workspace))
+    render_hook(host, "enter_meeting", %{action: "start"})
+    assert_reply host, %{status: "ok", meeting_id: id, token: join_token}
+    room = Meeting.room_name(%Meeting{id: id})
+
+    assert has_element?(
+             host,
+             "#meeting-room[data-can-transcribe=true][data-transcripts-configured=true]"
+           )
+
+    assert has_element?(member, "#meeting-room[data-can-transcribe=false]")
+
+    render_hook(member, "transcript_control", %{action: "start", id: id})
+    assert_reply member, %{status: "error"}
+
+    render_hook(host, "transcript_control", %{action: "start", id: id})
+
+    assert_reply host, %{
+      status: "error",
+      message: "Join the call before starting the transcript."
+    }
+
+    Req.Test.stub(__MODULE__, fn request ->
+      assert request.path_info == ["twirp", "livekit.RoomService", "ListParticipants"]
+      Req.Test.json(request, %{participants: [%{identity: token_claims(join_token)["sub"]}]})
+    end)
+
+    Req.Test.expect(:transcription, fn request ->
+      assert request.path_info == ["rooms", room, "start"]
+      assert get_req_header(request, "authorization") == ["Bearer transcription-test"]
+      {:ok, body, request} = read_body(request)
+      assert %{"token" => token} = Jason.decode!(body)
+
+      assert %{
+               "sub" => "devloom-transcriber",
+               "kind" => "agent",
+               "video" => %{
+                 "room" => ^room,
+                 "roomJoin" => true,
+                 "canSubscribe" => true,
+                 "canPublishData" => true,
+                 "canPublish" => false
+               }
+             } = token_claims(token)
+
+      Req.Test.json(request, %{active: true})
+    end)
+
+    render_hook(host, "transcript_control", %{action: "start", id: id})
+    assert_reply host, %{status: "ok"}
+
+    render_hook(member, "transcript_control", %{action: "stop", id: id})
+    assert_reply member, %{status: "error"}
+
+    Req.Test.expect(:transcription, fn request ->
+      assert request.path_info == ["rooms", room, "stop"]
+      Req.Test.json(request, %{active: false})
+    end)
+
+    render_hook(host, "transcript_control", %{action: "stop", id: id})
+    assert_reply host, %{status: "ok"}
+    assert Req.Test.verify!(:transcription)
+  end
+
   test "failed media server requests can be retried without leaving duplicate meetings", %{
     conn: conn,
     scope: owner,
@@ -152,7 +231,11 @@ defmodule DevloomWeb.MeetingLiveTest do
 
         "ListParticipants" ->
           Req.Test.json(request, %{
-            participants: [%{identity: identity}, %{identity: "recording-worker", kind: "EGRESS"}]
+            participants: [
+              %{identity: identity},
+              %{identity: "recording-worker", kind: "EGRESS"},
+              %{identity: "devloom-transcriber", kind: "AGENT"}
+            ]
           })
 
         "RemoveParticipant" ->
@@ -168,6 +251,12 @@ defmodule DevloomWeb.MeetingLiveTest do
     Meetings.reconcile(workspace.id)
     assert_receive {:removed, %{"room" => ^room, "identity" => ^identity}}
     refute_received {:removed, %{"identity" => "recording-worker"}}
+    refute_received {:removed, %{"identity" => "devloom-transcriber"}}
+  end
+
+  defp token_claims(token) do
+    [_, payload, _] = String.split(token, ".")
+    payload |> Base.url_decode64!(padding: false) |> Jason.decode!()
   end
 
   defp invite_member(owner) do

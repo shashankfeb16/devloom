@@ -15,7 +15,7 @@ defmodule Devloom.Application do
       DevloomWeb.Presence,
       Devloom.Meetings.Reconciler,
       Devloom.Meetings.RecordingReconciler,
-      {Task.Supervisor, name: Devloom.Meetings.RecordingTasks},
+      {Task.Supervisor, name: Devloom.Meetings.MediaTasks},
       # Start a worker by calling: Devloom.Worker.start_link(arg)
       # {Devloom.Worker, arg},
       # Start to serve requests, typically the last entry

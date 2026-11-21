@@ -2,7 +2,7 @@ defmodule DevloomWeb.MeetingLive do
   use DevloomWeb, :live_view
 
   alias Devloom.Meetings
-  alias Devloom.Meetings.Recordings
+  alias Devloom.Meetings.{Recordings, Transcripts}
 
   @impl true
   def mount(_params, _session, socket) do
@@ -13,7 +13,8 @@ defmodule DevloomWeb.MeetingLive do
      |> assign(
        page_title: "Meetings",
        meetings_configured: Meetings.configured?(),
-       recordings_configured: Recordings.configured?()
+       recordings_configured: Recordings.configured?(),
+       transcripts_configured: Transcripts.configured?()
      )
      |> refresh_recording()}
   end
@@ -60,6 +61,19 @@ defmodule DevloomWeb.MeetingLive do
     end
   end
 
+  def handle_event("transcript_control", %{"action" => action, "id" => id}, socket)
+      when action in ["start", "stop"] do
+    %{current_scope: scope, session_token: token} = socket.assigns
+
+    case Transcripts.control(scope, id, token, action) do
+      :ok ->
+        {:reply, %{status: "ok"}, socket}
+
+      {:error, reason} ->
+        {:reply, %{status: "error", message: transcript_error_message(reason)}, socket}
+    end
+  end
+
   @impl true
   def handle_info(:recordings_changed, socket), do: {:noreply, refresh_recording(socket)}
 
@@ -80,6 +94,15 @@ defmodule DevloomWeb.MeetingLive do
   defp refresh_recording(socket) do
     assign(socket, :active_recording, Recordings.active(socket.assigns.active_meeting))
   end
+
+  defp transcript_error_message(:disabled),
+    do: "Live transcription is unavailable on this server."
+
+  defp transcript_error_message(:unavailable),
+    do: "The transcription service could not complete that action. Try again."
+
+  defp transcript_error_message(:not_in_call), do: "Join the call before starting the transcript."
+  defp transcript_error_message(reason), do: error_message(reason)
 
   defp error_message(:recording_in_progress), do: "A recording is already in progress."
   defp error_message(:no_recording), do: "There is no recording to stop."
@@ -148,6 +171,10 @@ defmodule DevloomWeb.MeetingLive do
             to_string(@active_meeting != nil and Meetings.can_end?(@current_scope, @active_meeting))
           }
           data-recordings-configured={to_string(@recordings_configured)}
+          data-transcripts-configured={to_string(@transcripts_configured)}
+          data-can-transcribe={
+            to_string(@active_meeting != nil and Meetings.can_end?(@current_scope, @active_meeting))
+          }
           data-workspace-id={@workspace.id}
           data-workspace-name={@workspace.name}
           data-meeting-path={~p"/workspaces/#{@workspace.id}/meetings"}

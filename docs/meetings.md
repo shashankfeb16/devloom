@@ -61,3 +61,19 @@ On macOS or Linux, add `COMPOSE_FILE=compose.yaml:compose.recordings.yaml:compos
 
 3. Use LiveKit server v1.13.5 or newer and run a compatible [LiveKit Egress worker](https://docs.livekit.io/transport/self-hosting/egress/) such as v1.15.0. Configure LiveKit and Egress to use the same private Redis service. Give Egress the LiveKit URL and API credentials. Apply the database migration and restart Devloom with the recording environment variables.
 4. Join a call from two workspace accounts, start recording, and verify the indicator on both. Share a screen and speak from both accounts, then stop the recording. When the video appears in **Recordings**, verify playback, seeking, downloading, and deletion from the owner account.
+
+## Live transcripts
+
+In a call, open **Transcript**. The meeting host or workspace owner can select **Start transcript**. Participants see the transcription indicator, and recognized English speech appears in the panel with the speaker’s name. Lines received during the call stay available while the panel is closed and clear when you leave the meeting.
+
+Transcription uses the participants’ published microphones and runs on the Devloom server with an offline Vosk model. The worker sends transcript text to participants in the same LiveKit room, and Devloom keeps it in the open meeting view.
+
+For local development, generate a secret with `openssl rand -hex 32`, save it as `TRANSCRIPTION_SECRET` in your private `.env`, and start the worker alongside Devloom with this command.
+
+```sh
+docker compose -f compose.yaml -f compose.transcriptions.yaml up -d --build
+```
+
+When using the recording overlays, keep them in the Compose command and add `-f compose.transcriptions.yaml` before `up`. If your `.env` sets `COMPOSE_FILE`, you can append the transcript overlay to that list. The first worker build downloads the English speech recognition model.
+
+For a shared deployment, build the image from `docker/transcription`, set the worker’s `LIVEKIT_URL` to its LiveKit WebSocket address, and give the worker and Devloom the same private `TRANSCRIPTION_SECRET`. Set Devloom’s `TRANSCRIPTION_URL` to the worker’s private HTTP(S) origin on port 8095. Keep the worker’s control port reachable only from Devloom.

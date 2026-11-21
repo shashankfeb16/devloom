@@ -1,6 +1,8 @@
 defmodule Devloom.Meetings.LiveKit do
   @moduledoc false
 
+  @transcriber "devloom-transcriber"
+
   def configured? do
     Enum.all?([:url, :api_url, :api_key, :api_secret], fn key ->
       value = config()[key]
@@ -23,6 +25,21 @@ defmodule Devloom.Meetings.LiveKit do
       token: sign(%{sub: identity, name: user.name, video: grant}, 60)
     }
   end
+
+  def transcriber_token(room) do
+    grant = %{
+      room: room,
+      roomJoin: true,
+      canSubscribe: true,
+      canPublish: false,
+      canPublishData: true
+    }
+
+    sign(%{sub: @transcriber, kind: "agent", video: grant}, 60)
+  end
+
+  def transcriber?(%{"identity" => @transcriber, "kind" => kind}), do: kind in ["AGENT", 4]
+  def transcriber?(_participant), do: false
 
   def create_room(room) do
     request("CreateRoom", %{name: room, empty_timeout: 120, departure_timeout: 45}, %{

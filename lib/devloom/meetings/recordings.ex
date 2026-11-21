@@ -150,7 +150,7 @@ defmodule Devloom.Meetings.Recordings do
   # A meeting view can disconnect as soon as a user navigates to Recordings.
   # Keep its authorized request running until the remote operation is handled.
   defp run_control(fun) do
-    Devloom.Meetings.RecordingTasks
+    Devloom.Meetings.MediaTasks
     |> Task.Supervisor.async_nolink(fun)
     |> Task.await(:infinity)
   end

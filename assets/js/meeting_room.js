@@ -1,4 +1,5 @@
 import {DisconnectReason, Room, RoomEvent, Track} from "livekit-client"
+import {readTranscriptPacket, TRANSCRIPT_WORKER} from "./meeting_transcript.mjs"
 
 const trackEvents = [
   RoomEvent.ParticipantConnected, RoomEvent.ParticipantDisconnected,
@@ -7,6 +8,8 @@ const trackEvents = [
   RoomEvent.TrackMuted, RoomEvent.TrackUnmuted, RoomEvent.LocalTrackPublished,
   RoomEvent.LocalTrackUnpublished, RoomEvent.AudioPlaybackStatusChanged,
 ]
+const transcriptHistoryLimit = 200
+const transcriptTime = new Intl.DateTimeFormat(undefined, {hour: "numeric", minute: "2-digit"})
 
 let call
 
@@ -58,6 +61,15 @@ class MeetingCall {
     this.controls = Object.fromEntries(
       Array.from(this.shell.querySelectorAll("[data-action]"), control => [control.dataset.action, control])
     )
+    this.transcript = {
+      panel: this.shell.querySelector("#meeting-transcript-panel"),
+      title: this.shell.querySelector("#meeting-transcript-title"),
+      indicator: this.shell.querySelector("#meeting-transcript-indicator"),
+      log: this.shell.querySelector("[data-meeting-transcript-log]"),
+      empty: this.shell.querySelector("[data-meeting-transcript-empty]"),
+      lines: this.shell.querySelector("#meeting-transcript-lines"),
+      request: null,
+    }
     this.tiles = new Map()
     this.shares = new Map()
     this.audioTracks = new Map()
@@ -69,7 +81,8 @@ class MeetingCall {
     this.shell.addEventListener("keydown", event => {
       if (event.key === "Escape" && this.shell.dataset.mode === "expanded" && !document.fullscreenElement) {
         event.stopPropagation()
-        this.setMode("compact")
+        if (this.transcript.panel.hidden) this.setMode("compact")
+        else this.showTranscript(false)
       }
     })
     document.addEventListener("fullscreenchange", () => this.refreshFullscreen())
@@ -88,6 +101,7 @@ class MeetingCall {
     if (this.room) {
       this.setMode("compact", false)
       this.syncRecording()
+      this.syncTranscript()
     }
     if (this.phase === "opening") this.leave(null, false)
   }
@@ -111,6 +125,7 @@ class MeetingCall {
     this.controls.end.hidden = !this.isCallLobby(view) || !view.el.closest(".meeting-page").querySelector("#end-meeting")
     this.controls.end.disabled = !view.online
     this.syncRecording()
+    this.syncTranscript()
   }
 
   handleClick(event) {
@@ -126,6 +141,9 @@ class MeetingCall {
       case "fullscreen": return this.toggleFullscreen()
       case "end": return this.end()
       case "record": return this.toggleRecording()
+      case "transcript": return this.showTranscript(this.transcript.panel.hidden)
+      case "close-transcript": return this.showTranscript(false)
+      case "transcript-control": return this.toggleTranscription()
       case "leave": return this.leave()
       case "audio": return this.enableAudio()
       case "microphone": return this.toggle("microphone", "isMicrophoneEnabled", "setMicrophoneEnabled", "microphone")
@@ -192,6 +210,7 @@ class MeetingCall {
     if (expanded) {
       this.shell.setAttribute("role", "dialog")
       this.shell.setAttribute("aria-modal", "true")
+      if (!this.transcript.panel.hidden) this.scrollTranscript()
     } else {
       this.shell.removeAttribute("role")
       this.shell.removeAttribute("aria-modal")
@@ -292,6 +311,106 @@ class MeetingCall {
     button.querySelector("span:last-child").textContent = configured ? action : "Recording unavailable"
   }
 
+  showTranscript(open, focus = true) {
+    const {panel, title} = this.transcript
+    panel.hidden = !open
+    this.controls.transcript.setAttribute("aria-expanded", String(open))
+    if (open) this.scrollTranscript()
+    if (focus) (open ? title : this.controls.transcript).focus({preventScroll: true})
+  }
+
+  scrollTranscript() {
+    const {log} = this.transcript
+    log.scrollTop = log.scrollHeight
+  }
+
+  syncTranscript() {
+    const view = this.lobby
+    const {indicator, empty, lines, request} = this.transcript
+    const active = this.room?.remoteParticipants.has(TRANSCRIPT_WORKER) || false
+    const inCallLobby = this.isCallLobby(view)
+    const configured = inCallLobby && view.el.dataset.transcriptsConfigured === "true"
+    const canControl = inCallLobby && view.el.dataset.canTranscribe === "true"
+    const control = this.controls["transcript-control"]
+
+    indicator.hidden = !active
+    this.controls.transcript.disabled = !this.room || this.phase === "connecting"
+    control.hidden = !canControl
+    control.disabled = !configured || !view?.online || this.phase !== "connected" || Boolean(request)
+    if (request) {
+      control.textContent = request.action === "start" ? "Starting transcript…" : "Stopping transcript…"
+    } else {
+      control.textContent = active ? "Stop transcript" : "Start transcript"
+    }
+
+    empty.hidden = lines.childElementCount > 0
+    let message
+    if (active) message = "Waiting for speech…"
+    else if (request?.action === "start") message = "Starting the live transcript…"
+    else if (!configured) message = "Live transcription is unavailable."
+    else if (canControl) message = "Start when you’re ready to transcribe the meeting."
+    else message = "The meeting host or workspace owner can start the transcript."
+    if (empty.textContent !== message) empty.textContent = message
+  }
+
+  async toggleTranscription() {
+    const view = this.lobby
+    const control = this.controls["transcript-control"]
+    if (!this.isCallLobby(view) || control.hidden || control.disabled) return
+    const request = {
+      action: this.room.remoteParticipants.has(TRANSCRIPT_WORKER) ? "stop" : "start",
+      room: this.room,
+    }
+    if (request.action === "start" && !window.confirm(
+      "Start the live transcript? Speech from unmuted microphones will appear as English text for everyone in this call. Let participants know before starting."
+    )) return
+
+    this.transcript.request = request
+    this.syncTranscript()
+    this.message()
+    try {
+      const reply = await view.pushEvent("transcript_control", {id: this.meetingId, action: request.action})
+      if (this.room === request.room && reply.status !== "ok") this.message(reply.message)
+    } catch {
+      if (this.room === request.room) this.message("Could not update the transcript. Try again.")
+    } finally {
+      if (this.transcript.request === request) {
+        this.transcript.request = null
+        this.syncTranscript()
+      }
+    }
+  }
+
+  appendTranscript(room, payload, sender, topic) {
+    if (this.room !== room) return
+    const entry = readTranscriptPacket(payload, sender, topic)
+    if (!entry) return
+
+    const {lines, log, empty} = this.transcript
+    const speaker = entry.speaker === room.localParticipant.identity
+      ? room.localParticipant : room.remoteParticipants.get(entry.speaker)
+    const follow = log.scrollHeight - log.scrollTop - log.clientHeight < 48
+    const line = document.createElement("li")
+    const heading = document.createElement("div")
+    heading.className = "meeting-transcript-line-heading"
+    const name = document.createElement("strong")
+    name.className = "meeting-transcript-speaker"
+    name.textContent = speaker?.name || "Workspace member"
+    const time = document.createElement("time")
+    const now = new Date()
+    time.dateTime = now.toISOString()
+    time.textContent = transcriptTime.format(now)
+    const text = document.createElement("p")
+    text.className = "meeting-transcript-text"
+    text.textContent = entry.text
+    heading.append(name, time)
+    line.append(heading, text)
+    empty.hidden = true
+    if (lines.childElementCount >= transcriptHistoryLimit) lines.firstElementChild.remove()
+    lines.append(line)
+    if (follow) this.scrollTranscript()
+  }
+
   bindRoom(room) {
     // LiveKit can emit an unsubscribe event before it clears the publication.
     const syncAfterRoomEvent = () => queueMicrotask(() => {
@@ -303,6 +422,9 @@ class MeetingCall {
 
     room.on(RoomEvent.RecordingStatusChanged, () => {
       if (room === this.room) this.syncRecording()
+    })
+    room.on(RoomEvent.DataReceived, (payload, sender, _kind, topic) => {
+      this.appendTranscript(room, payload, sender, topic)
     })
     room.on(RoomEvent.Reconnecting, () => {
       if (room !== this.room) return
@@ -333,6 +455,9 @@ class MeetingCall {
     this.room = null
     this.meetingId = null
     this.phase = "lobby"
+    this.transcript.request = null
+    this.transcript.lines.replaceChildren()
+    this.showTranscript(false, false)
     if (room) void room.disconnect().catch(() => {})
     clearMedia(this.tiles)
     clearMedia(this.shares)
@@ -342,6 +467,7 @@ class MeetingCall {
     this.setMode("compact", false)
     this.refreshLobby()
     this.syncRecording()
+    this.syncTranscript()
     this.message(message)
     if (focus) this.lobby?.enter.focus({preventScroll: true})
     window.dispatchEvent(new Event("devloom:meeting-state"))
@@ -387,6 +513,7 @@ class MeetingCall {
     const audio = new Set()
 
     for (const participant of participants) {
+      if (participant.identity === TRANSCRIPT_WORKER) continue
       const self = participant === local
       const name = participant.name || "Workspace member"
       const label = self ? `${name} (you)` : name
@@ -431,6 +558,7 @@ class MeetingCall {
     this.elements.count.textContent = `${people.size} ${people.size === 1 ? "participant" : "participants"}`
     this.controls.audio.hidden = room.canPlaybackAudio
     this.syncRecording()
+    this.syncTranscript()
     this.setControl("microphone", local.isMicrophoneEnabled, "Mic on", "Mic off")
     this.setControl("camera", local.isCameraEnabled, "Camera on", "Camera off")
     this.setControl("screen", local.isScreenShareEnabled, "Stop sharing", "Share screen")

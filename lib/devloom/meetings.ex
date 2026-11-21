@@ -108,6 +108,7 @@ defmodule Devloom.Meetings do
 
       for %{"identity" => identity} = participant <- participants,
           not recorder?(participant),
+          not LiveKit.transcriber?(participant),
           not MapSet.member?(authorized, identity) do
         LiveKit.remove_participant(room, identity)
       end
