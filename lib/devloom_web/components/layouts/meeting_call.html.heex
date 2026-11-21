@@ -1,0 +1,85 @@
+<section
+  id="meeting-call-shell"
+  class="meeting-call-shell"
+  data-mode="compact"
+  aria-labelledby="meeting-call-title"
+  hidden
+>
+  <div class="meeting-call">
+    <header class="meeting-call-heading">
+      <div class="meeting-call-identity">
+        <div class="meeting-call-icon"><.icon name="hero-video-camera" class="size-5" /></div>
+        <div class="meeting-call-label">
+          <h2 id="meeting-call-title" class="meeting-call-title" data-meeting-workspace>
+            Workspace meeting
+          </h2>
+          <p data-meeting-state role="status"></p>
+        </div>
+      </div>
+      <div class="meeting-call-actions">
+        <span data-meeting-count aria-live="polite"></span>
+        <.link
+          navigate={~p"/workspaces"}
+          data-action="restore"
+          class="button meeting-control"
+        >
+          <.icon name="hero-arrow-top-right-on-square" class="size-4" /><span>Return to call</span>
+        </.link>
+        <button
+          data-action="minimize"
+          type="button"
+          class="button meeting-control"
+          title="Minimize call and return to Devloom"
+        >
+          <.icon name="hero-minus" class="size-4" /><span>Minimize</span>
+        </button>
+        <button
+          data-action="fullscreen"
+          type="button"
+          class="button meeting-control"
+          aria-pressed="false"
+        >
+          <.icon name="hero-arrows-pointing-out" class="size-4" /><span>Full screen</span>
+        </button>
+      </div>
+    </header>
+    <div class="meeting-call-stage">
+      <div data-meeting-shares class="meeting-shares" aria-label="Shared screens" hidden></div>
+      <div data-meeting-participants class="meeting-grid" aria-label="Meeting participants"></div>
+    </div>
+    <div data-meeting-audio hidden></div>
+    <div class="meeting-controls" role="group" aria-label="Call controls">
+      <button
+        data-action="microphone"
+        type="button"
+        class="button meeting-control"
+        aria-pressed="false"
+      >
+        <.icon name="hero-microphone" class="size-4" /><span>Mic off</span>
+      </button>
+      <button
+        data-action="camera"
+        type="button"
+        class="button meeting-control"
+        aria-pressed="false"
+      >
+        <.icon name="hero-video-camera" class="size-4" /><span>Camera off</span>
+      </button>
+      <button
+        data-action="screen"
+        type="button"
+        class="button meeting-control"
+        aria-pressed="false"
+      >
+        <.icon name="hero-computer-desktop" class="size-4" /><span>Share screen</span>
+      </button>
+      <button data-action="audio" type="button" class="button meeting-control" hidden>Enable sound</button>
+      <button data-action="end" type="button" class="button meeting-danger" hidden>End for everyone</button>
+      <button data-action="leave" type="button" class="button meeting-leave">
+        <.icon name="hero-phone-x-mark" class="size-4" /><span>Leave</span>
+      </button>
+    </div>
+    <p data-meeting-message class="meeting-message" role="status" hidden></p>
+  </div>
+</section>
+<p id="meeting-notice" class="meeting-notice" role="status" hidden></p>

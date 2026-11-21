@@ -483,7 +483,12 @@ defmodule DevloomWeb.BoardLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app flash={@flash} current_scope={@current_scope} active_view={@active_view}>
+    <Layouts.app
+      flash={@flash}
+      current_scope={@current_scope}
+      active_meeting={@active_meeting}
+      active_view={@active_view}
+    >
       <section class="board-page" aria-labelledby="board-title">
         <header class="page-heading">
           <div>

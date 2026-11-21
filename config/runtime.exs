@@ -23,6 +23,14 @@ end
 config :devloom, DevloomWeb.Endpoint,
   http: [port: String.to_integer(System.get_env("PORT", "4000"))]
 
+if config_env() != :test do
+  config :devloom, Devloom.Meetings.LiveKit,
+    url: System.get_env("LIVEKIT_URL"),
+    api_url: System.get_env("LIVEKIT_API_URL"),
+    api_key: System.get_env("LIVEKIT_API_KEY"),
+    api_secret: System.get_env("LIVEKIT_API_SECRET")
+end
+
 # The metrics listener is separate from the public Phoenix endpoint. The local
 # observability Compose overlay enables it without publishing its port.
 config :devloom, :observability,

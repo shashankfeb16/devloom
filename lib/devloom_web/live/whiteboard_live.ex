@@ -106,7 +106,12 @@ defmodule DevloomWeb.WhiteboardLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app flash={@flash} current_scope={@current_scope} active_view="whiteboard">
+    <Layouts.app
+      flash={@flash}
+      current_scope={@current_scope}
+      active_meeting={@active_meeting}
+      active_view="whiteboard"
+    >
       <section id="whiteboard-page" class="wb-page" aria-labelledby="whiteboard-title">
         <header class="wb-heading">
           <div class="wb-heading-main">

@@ -3,7 +3,10 @@ defmodule DevloomWeb.WorkspaceAuth do
   import Phoenix.Component
   import Phoenix.LiveView
 
-  alias Devloom.{WorkspacePresence, Workspaces}
+  alias Devloom.{Meetings, WorkspacePresence, Workspaces}
+
+  def on_mount(:ensure_member, _params, _session, %{view: DevloomWeb.WorkspaceLive} = socket),
+    do: {:cont, socket}
 
   def on_mount(:ensure_member, %{"workspace_id" => id}, _session, socket) do
     case Workspaces.fetch_scope(socket.assigns.current_scope, id) do
@@ -11,22 +14,40 @@ defmodule DevloomWeb.WorkspaceAuth do
         if connected?(socket) do
           Workspaces.subscribe(scope)
           WorkspacePresence.track(scope)
+          if Meetings.configured?(), do: Meetings.subscribe(scope)
         end
 
         {:cont,
          socket
-         |> assign(current_scope: scope, workspace: scope.workspace)
+         |> assign(
+           current_scope: scope,
+           workspace: scope.workspace,
+           active_meeting: Meetings.active(scope)
+         )
          |> attach_hook(:workspace_event_access, :handle_event, fn _event, _params, socket ->
            recheck_access(socket)
          end)
-         |> attach_hook(:workspace_message_access, :handle_info, fn _message, socket ->
-           recheck_access(socket)
+         |> attach_hook(:workspace_message_access, :handle_info, fn message, socket ->
+           handle_workspace_message(message, socket)
          end)}
 
       {:error, _reason} ->
         {:halt, deny_access(socket)}
     end
   end
+
+  defp handle_workspace_message({:meeting_changed, _id}, socket) do
+    case recheck_access(socket) do
+      {:cont, socket} ->
+        meeting = Meetings.active(socket.assigns.current_scope)
+        {:halt, assign(socket, :active_meeting, meeting)}
+
+      {:halt, socket} ->
+        {:halt, socket}
+    end
+  end
+
+  defp handle_workspace_message(_message, socket), do: recheck_access(socket)
 
   defp recheck_access(socket) do
     case Workspaces.fetch_scope(socket.assigns.current_scope, socket.assigns.workspace.id) do

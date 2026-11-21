@@ -403,6 +403,7 @@ defmodule Devloom.Workspaces do
 
   defp broadcast_membership({:ok, %Workspace{id: id}} = result) do
     Phoenix.PubSub.broadcast(Devloom.PubSub, topic(id), {:workspace_access_changed, id})
+    Devloom.Meetings.Reconciler.membership_changed(id)
     result
   end
 

@@ -13,6 +13,7 @@ defmodule Devloom.Application do
       {DNSCluster, query: Application.get_env(:devloom, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: Devloom.PubSub},
       DevloomWeb.Presence,
+      Devloom.Meetings.Reconciler,
       # Start a worker by calling: Devloom.Worker.start_link(arg)
       # {Devloom.Worker, arg},
       # Start to serve requests, typically the last entry

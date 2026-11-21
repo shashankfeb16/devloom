@@ -16,6 +16,18 @@ services:
       retries: 20
       start_period: 10s
 
+  livekit:
+    image: livekit/livekit-server:v1.13.11@sha256:25cd902de7cacbd5f1f779f6a6ac1eae20ba8f56b0935934ce6b0ab80d1e3d20
+    command: ["--config", "/etc/livekit.yaml"]
+    environment:
+      LIVEKIT_KEYS: "${LIVEKIT_API_KEY:-devloom-local}: ${LIVEKIT_API_SECRET:-devloom-local-only-secret-1234567890}"
+    volumes:
+      - ./docker/livekit.dev.yaml:/etc/livekit.yaml:ro
+    ports:
+      - "127.0.0.1:7880:7880"
+      - "127.0.0.1:7881:7881"
+      - "127.0.0.1:7882:7882/udp"
+
   web:
     build: .
     init: true
@@ -25,15 +37,22 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-devloom_local_password}
       POSTGRES_DB: ${POSTGRES_DB:-devloom_dev}
       PORT: "4000"
+      LIVEKIT_URL: ${LIVEKIT_URL:-ws://localhost:7880}
+      LIVEKIT_API_URL: http://livekit:7880
+      LIVEKIT_API_KEY: ${LIVEKIT_API_KEY:-devloom-local}
+      LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET:-devloom-local-only-secret-1234567890}
     ports:
       - "127.0.0.1:${APP_PORT:-4000}:4000"
     volumes:
       - .:/app
       - deps:/app/deps
       - build:/app/_build
+      - node_modules:/app/assets/node_modules
     depends_on:
       db:
         condition: service_healthy
+      livekit:
+        condition: service_started
     healthcheck:
       test: ["CMD", "curl", "--fail", "--silent", "--max-time", "6", "http://localhost:4000/health"]
       interval: 5s
@@ -45,3 +64,4 @@ volumes:
   pgdata:
   deps:
   build:
+  node_modules:

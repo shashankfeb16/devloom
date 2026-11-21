@@ -7,6 +7,7 @@ defmodule DevloomWeb.Layouts do
   attr :flash, :map, required: true
   attr :current_scope, :map, default: nil
   attr :active_view, :string, default: "board"
+  attr :active_meeting, :map, default: nil
   slot :inner_block, required: true
 
   def app(%{current_scope: nil} = assigns) do
@@ -122,6 +123,14 @@ defmodule DevloomWeb.Layouts do
         </.link>
         <.link
           :if={@workspace}
+          id="mobile-nav-meetings"
+          navigate={~p"/workspaces/#{@workspace.id}/meetings"}
+          class={@active_view == "meetings" && "active"}
+        >
+          <.icon name="hero-video-camera" class="size-4" />Meetings
+        </.link>
+        <.link
+          :if={@workspace}
           id="mobile-nav-members"
           navigate={~p"/workspaces/#{@workspace.id}/members"}
           class={@active_view == "members" && "active"}
@@ -207,6 +216,17 @@ defmodule DevloomWeb.Layouts do
           </.link>
           <.link
             :if={@workspace}
+            id="nav-meetings"
+            navigate={~p"/workspaces/#{@workspace.id}/meetings"}
+            class={["nav-item", "workspace-chat-link", @active_view == "meetings" && "active"]}
+            aria-current={@active_view == "meetings" && "page"}
+            aria-label="Meetings"
+            title="Meetings"
+          >
+            <.icon name="hero-video-camera" class="size-[18px]" /><span>Meetings</span>
+          </.link>
+          <.link
+            :if={@workspace}
             id="nav-members"
             navigate={~p"/workspaces/#{@workspace.id}/members"}
             class={["nav-item", "workspace-chat-link", @active_view == "members" && "active"]}
@@ -219,9 +239,6 @@ defmodule DevloomWeb.Layouts do
           <div class="sidebar-rule"></div>
           <div class="planned-nav-item" aria-disabled="true" title="Documentation — coming soon">
             <.icon name="hero-book-open" class="size-[18px]" /><span>Documentation</span><small>Soon</small>
-          </div>
-          <div class="planned-nav-item" aria-disabled="true" title="Meetings — coming soon">
-            <.icon name="hero-video-camera" class="size-[18px]" /><span>Meetings</span><small>Soon</small>
           </div>
         </nav>
         <div class="sidebar-bottom">
@@ -255,6 +272,18 @@ defmodule DevloomWeb.Layouts do
           @active_view == "whiteboard" && "workspace-content-whiteboard"
         ]}
       >
+        <div
+          :if={@workspace && @active_meeting && @active_view != "meetings"}
+          id="workspace-meeting-banner"
+          phx-hook="MeetingBanner"
+          data-meeting-id={@active_meeting.id}
+          class="meeting-banner"
+        >
+          <span><.icon name="hero-video-camera" class="size-4" /> Meeting in progress</span>
+          <.link navigate={~p"/workspaces/#{@workspace.id}/meetings"} class="button button-primary">
+            Join meeting
+          </.link>
+        </div>
         {render_slot(@inner_block)}
       </main>
     </div>
@@ -265,6 +294,7 @@ defmodule DevloomWeb.Layouts do
   defp view_title("chat"), do: "Chat"
   defp view_title("whiteboard"), do: "Whiteboard"
   defp view_title("members"), do: "Members"
+  defp view_title("meetings"), do: "Meetings"
   defp view_title("workspaces"), do: "Your workspaces"
   defp view_title("list"), do: "Work items"
   defp view_title(_), do: "Team board"

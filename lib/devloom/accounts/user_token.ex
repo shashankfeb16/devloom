@@ -19,14 +19,21 @@ defmodule Devloom.Accounts.UserToken do
   end
 
   def session_query(raw) when is_binary(raw) and byte_size(raw) == 32 do
-    from token in __MODULE__,
+    from token in active_token_query(raw),
       join: user in assoc(token, :user),
-      where: token.context == "session" and token.token == ^hash(raw),
-      where: token.inserted_at > ago(@validity_days, "day"),
       select: user
   end
 
   def session_query(_), do: nil
+
+  def active_token_query(raw) when is_binary(raw) and byte_size(raw) == 32 do
+    from token in active_sessions(), where: token.token == ^hash(raw)
+  end
+
+  def active_sessions do
+    from token in __MODULE__,
+      where: token.context == "session" and token.inserted_at > ago(@validity_days, "day")
+  end
 
   def token_query(raw) when is_binary(raw) and byte_size(raw) == 32 do
     from token in __MODULE__, where: token.context == "session" and token.token == ^hash(raw)
