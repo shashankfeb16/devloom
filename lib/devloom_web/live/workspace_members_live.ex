@@ -147,7 +147,12 @@ defmodule DevloomWeb.WorkspaceMembersLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app flash={@flash} current_scope={@current_scope} active_view="members">
+    <Layouts.app
+      flash={@flash}
+      current_scope={@current_scope}
+      active_meeting={@active_meeting}
+      active_view="members"
+    >
       <section
         id="workspace-members-page"
         class="workspace-members-page"

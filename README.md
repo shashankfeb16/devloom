@@ -113,6 +113,14 @@ docker compose restart web
 
 Normal application startup also applies pending migrations automatically.
 
+## Use workspace meetings
+
+Open **Meetings** from the workspace navigation and select **Start meeting**. Other signed-in workspace members see **Join meeting** in the workspace while the call is active. Everyone joins with their mic and camera off and can enable them individually. Desktop browsers with screen sharing can share a screen or window. **Leave** exits your call. The meeting host or workspace owner can use **End for everyone**.
+
+Calls open in a full-window view. Select **Full screen** to hide browser controls where supported, or **Minimize** to use Team board and other Devloom pages while staying in the call. The call dock includes **Return to call**, mic and leave controls. You can also switch to another browser tab or app while the Devloom tab stays open. Reloading or closing that tab leaves the call.
+
+The development Docker stack runs its own LiveKit server on localhost. Reload an existing stack with `docker compose up --build -d --wait` and open Devloom at `http://localhost:4000` to try it. For a shared workspace deployment, see [Self-host LiveKit for Devloom](docs/meetings.md).
+
 ## Start the application
 
 Install and start [Docker Desktop](https://www.docker.com/products/docker-desktop/). Use Linux containers. Windows users should use Docker Desktop's WSL 2 backend; macOS users can use the Docker Desktop build for Apple Silicon or Intel as appropriate. Elixir, Erlang, PostgreSQL, and Node.js do not need to be installed on the host.

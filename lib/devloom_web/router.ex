@@ -38,19 +38,16 @@ defmodule DevloomWeb.Router do
     pipe_through [:browser, :require_authenticated_user]
 
     live_session :authenticated,
-      on_mount: [{DevloomWeb.UserAuth, :ensure_authenticated}] do
-      live "/workspaces", WorkspaceLive
-    end
-
-    live_session :workspace,
       on_mount: [
         {DevloomWeb.UserAuth, :ensure_authenticated},
         {DevloomWeb.WorkspaceAuth, :ensure_member}
       ] do
+      live "/workspaces", WorkspaceLive
       live "/workspaces/:workspace_id/board", BoardLive
       live "/workspaces/:workspace_id/whiteboard", WhiteboardLive
       live "/workspaces/:workspace_id/chat", ChatLive, :team
       live "/workspaces/:workspace_id/chat/direct/:member_id", ChatLive, :direct
+      live "/workspaces/:workspace_id/meetings", MeetingLive
       live "/workspaces/:workspace_id/members", WorkspaceMembersLive
     end
   end

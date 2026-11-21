@@ -38,3 +38,8 @@
   .workspace-brand-group .brand { flex: initial; }
   .sidebar-toggle { display: none; }
 }
+
+@media (max-width: 700px) {
+  .workspace-shell .workspace-mobile-nav { justify-content: flex-start; gap: 16px; overflow-x: auto; scrollbar-width: none; }
+  .workspace-mobile-nav a { flex-shrink: 0; }
+}

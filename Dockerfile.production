@@ -1,9 +1,15 @@
-# Build a self-contained Phoenix release; the development Dockerfile is unchanged.
+# Build a self-contained Phoenix release.
+FROM node:24-bookworm-slim@sha256:dc26ae92c9fb15cf6b1d63e20f0944b2efe0f115b20e00be48fb23fceb061c54 AS node
+
 FROM elixir:1.19.7-otp-28-slim@sha256:b0082436839969c6eac09ee99515980322d8ecadd302ff7b9fd6547aa24cddf9 AS build
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends build-essential git ca-certificates \
     && rm -rf /var/lib/apt/lists/*
+
+COPY --from=node /usr/local/bin/node /usr/local/bin/node
+COPY --from=node /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/npm
+RUN ln -s ../lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm
 
 ENV MIX_ENV=prod \
     HEX_CACERTS_PATH=/etc/ssl/certs/ca-certificates.crt

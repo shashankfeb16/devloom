@@ -6,6 +6,7 @@
 @import "./direct_chat.css";
 @import "./sidebar.css";
 @import "./whiteboard.css";
+@import "./meetings.css";
 @source "../css";
 @source "../js";
 @source "../../lib/devloom_web";

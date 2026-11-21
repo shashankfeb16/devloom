@@ -15,5 +15,8 @@
     <script defer phx-track-static type="text/javascript" src={~p"/assets/js/app.js"}>
     </script>
   </head>
-  <body>{@inner_content}</body>
+  <body>
+    <div id="devloom-page">{@inner_content}</div>
+    <.meeting_call />
+  </body>
 </html>

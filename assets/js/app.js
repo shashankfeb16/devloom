@@ -28,6 +28,7 @@ import {ColumnReorder} from "./column_reorder"
 import {ChatScroll, ChatComposer, ChatTimestamp} from "./chat"
 import {initializeSidebar} from "./sidebar"
 import {Whiteboard} from "./whiteboard"
+import {MeetingBanner, MeetingRoom} from "./meeting_room"
 import topbar from "../vendor/topbar"
 
 initializeSidebar()
@@ -36,7 +37,7 @@ const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: {_csrf_token: csrfToken},
-  hooks: {...colocatedHooks, KanbanBoard, FocusDialog, ColumnReorder, ChatScroll, ChatComposer, ChatTimestamp, Whiteboard},
+  hooks: {...colocatedHooks, KanbanBoard, FocusDialog, ColumnReorder, ChatScroll, ChatComposer, ChatTimestamp, Whiteboard, MeetingBanner, MeetingRoom},
 })
 
 // Show progress bar on live navigation and form submits

@@ -377,7 +377,12 @@ defmodule DevloomWeb.ChatLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app flash={@flash} current_scope={@current_scope} active_view="chat">
+    <Layouts.app
+      flash={@flash}
+      current_scope={@current_scope}
+      active_meeting={@active_meeting}
+      active_view="chat"
+    >
       <section id="chat-page" class="chat-page" aria-labelledby="chat-title">
         <header class="page-heading chat-page-heading">
           <div>
