@@ -14,6 +14,7 @@
             Workspace meeting
           </h2>
           <p data-meeting-state role="status"></p>
+          <p data-meeting-recording role="status" hidden></p>
         </div>
       </div>
       <div class="meeting-call-actions">
@@ -72,6 +73,16 @@
         aria-pressed="false"
       >
         <.icon name="hero-computer-desktop" class="size-4" /><span>Share screen</span>
+      </button>
+      <button
+        id="meeting-recording-control"
+        data-action="record"
+        type="button"
+        class="button meeting-control"
+        aria-pressed="false"
+        hidden
+      >
+        <.icon name="hero-film" class="size-4" /><span>Start recording</span>
       </button>
       <button data-action="audio" type="button" class="button meeting-control" hidden>Enable sound</button>
       <button data-action="end" type="button" class="button meeting-danger" hidden>End for everyone</button>

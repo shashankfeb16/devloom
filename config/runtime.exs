@@ -29,6 +29,13 @@ if config_env() != :test do
     api_url: System.get_env("LIVEKIT_API_URL"),
     api_key: System.get_env("LIVEKIT_API_KEY"),
     api_secret: System.get_env("LIVEKIT_API_SECRET")
+
+  config :devloom, Devloom.Meetings.RecordingStorage,
+    bucket: System.get_env("RECORDINGS_S3_BUCKET"),
+    region: System.get_env("RECORDINGS_S3_REGION"),
+    access_key_id: System.get_env("RECORDINGS_S3_ACCESS_KEY_ID"),
+    secret_access_key: System.get_env("RECORDINGS_S3_SECRET_ACCESS_KEY"),
+    endpoint: System.get_env("RECORDINGS_S3_ENDPOINT")
 end
 
 # The metrics listener is separate from the public Phoenix endpoint. The local

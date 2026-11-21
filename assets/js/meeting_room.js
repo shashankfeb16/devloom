@@ -52,7 +52,7 @@ class MeetingCall {
     this.page = document.getElementById("devloom-page")
     this.notice = document.getElementById("meeting-notice")
     this.elements = Object.fromEntries(
-      ["workspace", "state", "count", "shares", "participants", "audio", "message"]
+      ["workspace", "state", "count", "shares", "participants", "audio", "message", "recording"]
         .map(name => [name, this.shell.querySelector(`[data-meeting-${name}]`)])
     )
     this.controls = Object.fromEntries(
@@ -85,7 +85,10 @@ class MeetingCall {
   detachLobby(view) {
     if (this.lobby !== view) return
     this.lobby = null
-    if (this.room) this.setMode("compact", false)
+    if (this.room) {
+      this.setMode("compact", false)
+      this.syncRecording()
+    }
     if (this.phase === "opening") this.leave(null, false)
   }
 
@@ -107,6 +110,7 @@ class MeetingCall {
       : this.phase === "opening" ? "Connecting…" : meetingId ? "Join meeting" : "Start meeting"
     this.controls.end.hidden = !this.isCallLobby(view) || !view.el.closest(".meeting-page").querySelector("#end-meeting")
     this.controls.end.disabled = !view.online
+    this.syncRecording()
   }
 
   handleClick(event) {
@@ -121,6 +125,7 @@ class MeetingCall {
         return
       case "fullscreen": return this.toggleFullscreen()
       case "end": return this.end()
+      case "record": return this.toggleRecording()
       case "leave": return this.leave()
       case "audio": return this.enableAudio()
       case "microphone": return this.toggle("microphone", "isMicrophoneEnabled", "setMicrophoneEnabled", "microphone")
@@ -230,6 +235,63 @@ class MeetingCall {
     }
   }
 
+  async toggleRecording() {
+    const view = this.lobby
+    const id = this.meetingId
+    const button = this.controls.record
+    if (button.hidden || button.disabled) return
+    const action = this.recordingStatus() === "recording" ? "stop" : "start"
+    if (action === "start" && !window.confirm(
+      "Start recording this meeting? Everyone in the call will see a recording indicator. Workspace members can watch the saved recording."
+    )) return
+
+    button.dataset.pending = "true"
+    this.syncRecording()
+    this.message()
+
+    try {
+      const reply = await view.pushEvent("recording_control", {id, action})
+      if (this.meetingId === id && reply.status === "error") this.message(reply.message)
+    } catch {
+      if (this.meetingId === id) this.message("Could not update the recording. Check the recording status and try again.")
+    } finally {
+      delete button.dataset.pending
+      this.syncRecording()
+    }
+  }
+
+  recordingStatus() {
+    const status = this.isCallLobby() && this.lobby.el.dataset.recordingStatus
+    return status || (this.room?.isRecording ? "recording" : "")
+  }
+
+  syncRecording() {
+    const view = this.lobby
+    const status = this.recordingStatus()
+    const button = this.controls.record
+    const label = this.elements.recording
+    const recording = status === "recording"
+
+    const notice = ({
+      starting: this.room?.isRecording ? "Recording" : "Starting recording…",
+      recording: "Recording",
+      processing: "Saving recording…",
+    })[status] || ""
+
+    label.hidden = !notice
+    label.dataset.status = status
+    if (label.textContent !== notice) label.textContent = notice
+
+    const configured = view?.el.dataset.recordingsConfigured === "true"
+    button.hidden = !this.isCallLobby(view) || view.el.dataset.canRecord !== "true"
+    button.disabled = !configured || !view?.online || this.phase !== "connected" ||
+      status === "starting" || status === "processing" || button.dataset.pending === "true"
+    button.setAttribute("aria-pressed", String(recording))
+    button.title = configured ? "" : "Set up recording storage to record meetings."
+    const action = recording ? "Stop recording" : "Start recording"
+    button.querySelector("span:last-child").textContent = configured ? action : "Recording unavailable"
+  }
+
   bindRoom(room) {
     // LiveKit can emit an unsubscribe event before it clears the publication.
     const syncAfterRoomEvent = () => queueMicrotask(() => {
@@ -239,6 +301,9 @@ class MeetingCall {
       room.on(event, syncAfterRoomEvent)
     }
 
+    room.on(RoomEvent.RecordingStatusChanged, () => {
+      if (room === this.room) this.syncRecording()
+    })
     room.on(RoomEvent.Reconnecting, () => {
       if (room !== this.room) return
       this.phase = "reconnecting"
@@ -276,6 +341,7 @@ class MeetingCall {
     this.elements.count.textContent = ""
     this.setMode("compact", false)
     this.refreshLobby()
+    this.syncRecording()
     this.message(message)
     if (focus) this.lobby?.enter.focus({preventScroll: true})
     window.dispatchEvent(new Event("devloom:meeting-state"))
@@ -364,6 +430,7 @@ class MeetingCall {
     this.elements.shares.hidden = !shares.size
     this.elements.count.textContent = `${people.size} ${people.size === 1 ? "participant" : "participants"}`
     this.controls.audio.hidden = room.canPlaybackAudio
+    this.syncRecording()
     this.setControl("microphone", local.isMicrophoneEnabled, "Mic on", "Mic off")
     this.setControl("camera", local.isCameraEnabled, "Camera on", "Camera off")
     this.setControl("screen", local.isScreenShareEnabled, "Stop sharing", "Share screen")

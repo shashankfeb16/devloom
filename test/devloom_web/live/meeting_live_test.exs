@@ -73,6 +73,20 @@ defmodule DevloomWeb.MeetingLiveTest do
     assert has_element?(member, ~s(#meeting-room[data-meeting-id="#{id}"]))
     assert has_element?(board, "#workspace-meeting-banner a")
 
+    assert has_element?(
+             host,
+             "#meeting-room[data-can-record=true][data-recordings-configured=false]"
+           )
+
+    assert has_element?(member, "#meeting-room[data-can-record=false]")
+
+    render_hook(host, "recording_control", %{id: id, action: "start"})
+
+    assert_reply host, %{
+      status: "error",
+      message: "Recording is unavailable on this Devloom server."
+    }
+
     [_, payload, _] = String.split(token, ".")
     claims = payload |> Base.url_decode64!(padding: false) |> Jason.decode!()
     assert claims["video"]["room"] == Meeting.room_name(%Meeting{id: id})
@@ -137,7 +151,9 @@ defmodule DevloomWeb.MeetingLiveTest do
           Req.Test.json(request, %{rooms: [%{name: room}]})
 
         "ListParticipants" ->
-          Req.Test.json(request, %{participants: [%{identity: identity}]})
+          Req.Test.json(request, %{
+            participants: [%{identity: identity}, %{identity: "recording-worker", kind: "EGRESS"}]
+          })
 
         "RemoveParticipant" ->
           {:ok, body, request} = Plug.Conn.read_body(request)
@@ -151,6 +167,7 @@ defmodule DevloomWeb.MeetingLiveTest do
     assert_redirect(member, "/workspaces")
     Meetings.reconcile(workspace.id)
     assert_receive {:removed, %{"room" => ^room, "identity" => ^identity}}
+    refute_received {:removed, %{"identity" => "recording-worker"}}
   end
 
   defp invite_member(owner) do

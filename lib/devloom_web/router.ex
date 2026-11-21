@@ -37,6 +37,8 @@ defmodule DevloomWeb.Router do
   scope "/", DevloomWeb do
     pipe_through [:browser, :require_authenticated_user]
 
+    get "/workspaces/:workspace_id/recordings/:id/video", RecordingController, :show
+
     live_session :authenticated,
       on_mount: [
         {DevloomWeb.UserAuth, :ensure_authenticated},
@@ -48,6 +50,8 @@ defmodule DevloomWeb.Router do
       live "/workspaces/:workspace_id/chat", ChatLive, :team
       live "/workspaces/:workspace_id/chat/direct/:member_id", ChatLive, :direct
       live "/workspaces/:workspace_id/meetings", MeetingLive
+      live "/workspaces/:workspace_id/recordings", RecordingsLive, :index
+      live "/workspaces/:workspace_id/recordings/:recording_id", RecordingsLive, :show
       live "/workspaces/:workspace_id/members", WorkspaceMembersLive
     end
   end

@@ -220,7 +220,7 @@ body:has(.meeting-call-shell[data-mode="expanded"]:not([hidden])) { overflow: hi
   background: #182237;
 }
 
-.meeting-call-shell[data-mode="compact"] :is(.meeting-call-stage, [data-action="fullscreen"], [data-action="minimize"], [data-action="end"], [data-action="camera"], [data-action="screen"], [data-meeting-count]) { display: none; }
+.meeting-call-shell[data-mode="compact"] :is(.meeting-call-stage, [data-action="fullscreen"], [data-action="minimize"], [data-action="end"], [data-action="camera"], [data-action="screen"], [data-action="record"], [data-meeting-count]) { display: none; }
 .meeting-call-shell[data-mode="compact"] [data-action="restore"] { display: inline-flex; }
 .meeting-call-shell[data-mode="compact"] .meeting-call-heading { gap: 12px; padding: 8px 0 8px 12px; border: 0; }
 .meeting-call-shell[data-mode="compact"] .meeting-call-icon { display: none; }
@@ -271,3 +271,22 @@ body:has(.meeting-call-shell[data-mode="compact"]:not([hidden])) :is(.workspace-
 .workspace-content-whiteboard:has(> .meeting-banner), .workspace-content-chat:has(> .meeting-banner) { display: flex; flex-direction: column; }
 .workspace-content:has(> .meeting-banner) > :is(.wb-page, .chat-page) { flex: 1; height: auto; min-height: 0; }
 .workspace-content > .meeting-banner { margin-bottom: 12px; border: 1px solid #dae6f7; border-radius: 8px; }
+
+.meeting-call-heading [data-meeting-recording] {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  color: #fbc4cc;
+  font-size: 12px;
+  font-weight: 650;
+}
+.meeting-call-heading [data-meeting-recording]::before {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  content: "";
+}
+.meeting-call-heading [data-meeting-recording][data-status="recording"]::before { background: #fa667b; }
+.meeting-controls [data-action="record"][aria-pressed="true"] { color: #ffc5cc; border-color: #8e4a5d; }

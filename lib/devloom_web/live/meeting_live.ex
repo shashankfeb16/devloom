@@ -2,10 +2,20 @@ defmodule DevloomWeb.MeetingLive do
   use DevloomWeb, :live_view
 
   alias Devloom.Meetings
+  alias Devloom.Meetings.Recordings
 
   @impl true
   def mount(_params, _session, socket) do
-    {:ok, assign(socket, page_title: "Meetings", meetings_configured: Meetings.configured?())}
+    if connected?(socket), do: Recordings.subscribe(socket.assigns.current_scope)
+
+    {:ok,
+     socket
+     |> assign(
+       page_title: "Meetings",
+       meetings_configured: Meetings.configured?(),
+       recordings_configured: Recordings.configured?()
+     )
+     |> refresh_recording()}
   end
 
   @impl true
@@ -28,20 +38,58 @@ defmodule DevloomWeb.MeetingLive do
     end
   end
 
+  def handle_event("recording_control", %{"action" => action, "id" => id}, socket)
+      when action in ["start", "stop"] do
+    scope = socket.assigns.current_scope
+
+    result =
+      if action == "start", do: Recordings.start(scope, id), else: Recordings.stop(scope, id)
+
+    socket = refresh_recording(socket)
+
+    case result do
+      :ok ->
+        {:reply, %{status: "ok"}, socket}
+
+      {:error, :disabled} ->
+        {:reply, %{status: "error", message: "Recording is unavailable on this Devloom server."},
+         socket}
+
+      {:error, reason} ->
+        {:reply, %{status: "error", message: error_message(reason)}, socket}
+    end
+  end
+
   @impl true
+  def handle_info(:recordings_changed, socket), do: {:noreply, refresh_recording(socket)}
+
   def handle_info({:workspace_access_changed, _id}, socket), do: {:noreply, socket}
 
   defp enter(socket, action) do
     case Meetings.join(socket.assigns.current_scope, action, socket.assigns.session_token) do
       {:ok, meeting, credentials} ->
         {:reply, Map.merge(credentials, %{status: "ok", meeting_id: meeting.id}),
-         assign(socket, :active_meeting, meeting)}
+         socket |> assign(:active_meeting, meeting) |> refresh_recording()}
 
       {:error, reason} ->
         socket = assign(socket, :active_meeting, Meetings.active(socket.assigns.current_scope))
         {:reply, %{status: "error", message: error_message(reason)}, socket}
     end
   end
+
+  defp refresh_recording(socket) do
+    assign(socket, :active_recording, Recordings.active(socket.assigns.active_meeting))
+  end
+
+  defp error_message(:recording_in_progress), do: "A recording is already in progress."
+  defp error_message(:no_recording), do: "There is no recording to stop."
+  defp error_message(:rejected), do: "The recording service could not complete that action."
+
+  defp error_message(:recording_unavailable),
+    do: "The recording service could not start the recording."
+
+  defp error_message(:recording_start_unknown),
+    do: "The recording service did not respond. Checking whether recording started."
 
   defp error_message(:no_meeting), do: "That meeting has ended. You can start a new one."
   defp error_message(:forbidden), do: "Your workspace access does not allow this action."
@@ -58,17 +106,26 @@ defmodule DevloomWeb.MeetingLive do
             <h1 id="meeting-title">Meetings</h1>
             <p>Video calls for {@workspace.name}.</p>
           </div>
-          <button
-            :if={@active_meeting && Meetings.can_end?(@current_scope, @active_meeting)}
-            id="end-meeting"
-            type="button"
-            class="button meeting-danger"
-            phx-click="end_meeting"
-            phx-value-id={@active_meeting.id}
-            data-confirm="End this meeting for everyone?"
-          >
-            End for everyone
-          </button>
+          <div class="flex flex-wrap items-center gap-2">
+            <.link
+              navigate={~p"/workspaces/#{@workspace.id}/recordings"}
+              class="button"
+              id="meeting-recordings-link"
+            >
+              <.icon name="hero-film" class="size-4" /> Recordings
+            </.link>
+            <button
+              :if={@active_meeting && Meetings.can_end?(@current_scope, @active_meeting)}
+              id="end-meeting"
+              type="button"
+              class="button meeting-danger"
+              phx-click="end_meeting"
+              phx-value-id={@active_meeting.id}
+              data-confirm="End this meeting for everyone?"
+            >
+              End for everyone
+            </button>
+          </div>
         </header>
 
         <div :if={!@meetings_configured} id="meetings-unavailable" class="meeting-lobby">
@@ -83,6 +140,14 @@ defmodule DevloomWeb.MeetingLive do
           phx-hook="MeetingRoom"
           phx-update="ignore"
           data-meeting-id={@active_meeting && @active_meeting.id}
+          data-recording-status={
+            @active_meeting && @active_recording &&
+              @active_meeting.id == @active_recording.meeting_id && @active_recording.status
+          }
+          data-can-record={
+            to_string(@active_meeting != nil and Meetings.can_end?(@current_scope, @active_meeting))
+          }
+          data-recordings-configured={to_string(@recordings_configured)}
           data-workspace-id={@workspace.id}
           data-workspace-name={@workspace.name}
           data-meeting-path={~p"/workspaces/#{@workspace.id}/meetings"}

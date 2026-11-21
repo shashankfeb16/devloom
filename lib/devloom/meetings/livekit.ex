@@ -49,22 +49,91 @@ defmodule Devloom.Meetings.LiveKit do
     request("RemoveParticipant", %{room: room, identity: identity}, %{roomAdmin: true, room: room})
   end
 
-  defp request(method, body, grant) do
+  def start_recording(room, path) do
+    egress_request(
+      "StartEgress",
+      %{
+        room_name: room,
+        template: %{layout: "speaker"},
+        outputs: [%{file: %{filepath: path, file_type: "MP4", disable_manifest: true}}],
+        storage: %{s3: Devloom.Meetings.RecordingStorage.egress_upload()}
+      },
+      7_000
+    )
+    |> normalize_job()
+  end
+
+  def stop_recording(id), do: egress_request("StopEgress", %{egress_id: id}) |> normalize_job()
+
+  def recording_info(room, id, path) do
+    filter = if id, do: %{egress_id: id}, else: %{room_name: room}
+
+    with {:ok, response} <- egress_request("ListEgress", filter) do
+      response
+      |> Map.get("items", [])
+      |> Enum.find(fn job ->
+        if id do
+          (job["egress_id"] || job["egressId"]) == id
+        else
+          outputs = get_in(job, ["egress", "outputs"]) || []
+          Enum.any?(outputs, &(get_in(&1, ["file", "filepath"]) == path))
+        end
+      end)
+      |> case do
+        nil -> {:error, :not_found}
+        job -> normalize_job({:ok, job})
+      end
+    end
+  end
+
+  defp normalize_job({:ok, job}) do
+    {:ok,
+     %{
+       id: job["egress_id"] || job["egressId"],
+       status: egress_status(Map.get(job, "status", "EGRESS_STARTING")),
+       files: job["file_results"] || job["fileResults"] || []
+     }}
+  end
+
+  defp normalize_job(error), do: error
+
+  defp egress_status(value) when value in ["EGRESS_STARTING", 0], do: :starting
+  defp egress_status(value) when value in ["EGRESS_ACTIVE", 1], do: :recording
+  defp egress_status(value) when value in ["EGRESS_ENDING", 2], do: :processing
+
+  defp egress_status(value) when value in ["EGRESS_COMPLETE", "EGRESS_LIMIT_REACHED", 3, 6],
+    do: :complete
+
+  defp egress_status(value) when value in ["EGRESS_FAILED", "EGRESS_ABORTED", 4, 5], do: :failed
+  defp egress_status(_value), do: :unknown
+
+  defp egress_request(method, body, timeout \\ 2_500),
+    do: request(method, body, %{roomRecord: true}, "Egress", timeout)
+
+  defp request(method, body, grant, service \\ "RoomService", timeout \\ 2_500) do
     options = [
       url:
-        String.trim_trailing(config()[:api_url], "/") <> "/twirp/livekit.RoomService/" <> method,
+        String.trim_trailing(config()[:api_url], "/") <> "/twirp/livekit.#{service}/" <> method,
       auth: {:bearer, sign(%{video: grant}, 60)},
       json: body,
       retry: false,
       redirect: false,
-      receive_timeout: 2_500,
+      receive_timeout: timeout,
       connect_options: [timeout: 2_000]
     ]
 
     case Req.post(Keyword.merge(options, config()[:request_options] || [])) do
-      {:ok, %{status: 200, body: response}} when is_map(response) -> {:ok, response}
-      {:ok, %{status: 404, body: %{"code" => "not_found"}}} -> {:error, :not_found}
-      _ -> {:error, :unavailable}
+      {:ok, %{status: 200, body: response}} when is_map(response) ->
+        {:ok, response}
+
+      {:ok, %{status: 404, body: %{"code" => "not_found"}}} ->
+        {:error, :not_found}
+
+      {:ok, %{status: status}} when service == "Egress" and status in [400, 401, 403, 412] ->
+        {:error, :rejected}
+
+      _ ->
+        {:error, :unavailable}
     end
   end
 

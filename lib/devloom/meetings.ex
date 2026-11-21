@@ -3,7 +3,7 @@ defmodule Devloom.Meetings do
   import Ecto.Query
 
   alias Devloom.Accounts.{Scope, UserToken}
-  alias Devloom.Meetings.{LiveKit, Meeting}
+  alias Devloom.Meetings.{LiveKit, Meeting, Recordings}
   alias Devloom.Workspaces.{Membership, Workspace}
   alias Devloom.{Repo, Workspaces}
 
@@ -32,16 +32,20 @@ defmodule Devloom.Meetings do
   def join(_scope, _action, _session_token), do: {:error, :forbidden}
 
   def end_meeting(%Scope{} = scope, id) do
-    with {:ok, meeting} <-
-           with_workspace(scope, fn scope ->
-             meeting = active_in(scope.workspace.id)
-             unless meeting && meeting.id == id, do: Repo.rollback(:no_meeting)
-             unless can_end?(scope, meeting), do: Repo.rollback(:forbidden)
-             close_room(meeting)
-           end) do
+    with {:ok, meeting} <- with_control(scope, id, fn _scope, meeting -> close_room(meeting) end) do
       broadcast(meeting.workspace_id)
       {:ok, meeting}
     end
+  end
+
+  @doc false
+  def with_control(scope, id, fun) do
+    with_workspace(scope, fn scope ->
+      meeting = active_in(scope.workspace.id)
+      unless meeting && meeting.id == id, do: Repo.rollback(:no_meeting)
+      unless can_end?(scope, meeting), do: Repo.rollback(:forbidden)
+      fun.(scope, meeting)
+    end)
   end
 
   def can_end?(%Scope{user: user, membership: membership}, %Meeting{host_id: host}) do
@@ -102,10 +106,17 @@ defmodule Devloom.Meetings do
         |> Repo.all()
         |> MapSet.new(&"session-#{&1}")
 
-      for %{"identity" => identity} <- participants, not MapSet.member?(authorized, identity) do
+      for %{"identity" => identity} = participant <- participants,
+          not recorder?(participant),
+          not MapSet.member?(authorized, identity) do
         LiveKit.remove_participant(room, identity)
       end
     end
+  end
+
+  defp recorder?(participant) do
+    participant["kind"] in ["EGRESS", 2] or
+      get_in(participant, ["permission", "recorder"]) == true
   end
 
   defp session_id("session-" <> id) do
@@ -142,6 +153,8 @@ defmodule Devloom.Meetings do
   end
 
   defp close_room(meeting) do
+    Recordings.stop_before_room_close(meeting)
+
     case LiveKit.delete_room(Meeting.room_name(meeting)) do
       {:error, :unavailable} -> Repo.rollback(:unavailable)
       _ -> Repo.delete!(meeting, allow_stale: true)
