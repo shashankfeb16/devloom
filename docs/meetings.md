@@ -62,6 +62,14 @@ On macOS or Linux, add `COMPOSE_FILE=compose.yaml:compose.recordings.yaml:compos
 3. Use LiveKit server v1.13.5 or newer and run a compatible [LiveKit Egress worker](https://docs.livekit.io/transport/self-hosting/egress/) such as v1.15.0. Configure LiveKit and Egress to use the same private Redis service. Give Egress the LiveKit URL and API credentials. Apply the database migration and restart Devloom with the recording environment variables.
 4. Join a call from two workspace accounts, start recording, and verify the indicator on both. Share a screen and speak from both accounts, then stop the recording. When the video appears in **Recordings**, verify playback, seeking, downloading, and deletion from the owner account.
 
+## Generate text from saved recordings
+
+After the video is ready, open it under **Recordings**. Select **Generate transcript** to save a speaker-labeled transcript, or **Generate summary** for a recap with key points, decisions, and action items. A summary uses the saved transcript when available and queues one when needed. You can close the player while Devloom works. Select a timestamp in the transcript to seek in the video. For long videos, speaker numbers are assigned separately in each 15-minute audio part.
+
+Set `OPENROUTER_API_KEY` in the private `.env` for local Compose or the web container’s private `app.env` for a shared deployment. Rebuild the web image to install FFmpeg and apply pending database migrations during startup or deployment. On a native install, make `ffmpeg` available on the web server’s path. You can set `OPENROUTER_SUMMARY_MODEL` to a model that supports structured output. The default is `openai/gpt-5-mini`.
+
+Devloom downloads the private MP4 to temporary storage, extracts its audio with FFmpeg, and sends the audio to OpenRouter’s Scribe v2 endpoint. Summary generation sends the transcript text to OpenRouter. The background job deletes its temporary media after processing. Workspace members can reopen the saved transcript and summary without another API call. [OpenRouter’s ElevenLabs integration](https://openrouter.ai/blog/announcements/elevenlabs-on-openrouter/)
+
 ## Live transcripts
 
 In a call, open **Transcript**. The meeting host or workspace owner can select **Start transcript**. Participants see the transcription indicator, and recognized English speech appears in the panel with the speaker’s name. Lines received during the call stay available while the panel is closed and clear when you leave the meeting.

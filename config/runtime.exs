@@ -40,6 +40,10 @@ if config_env() != :test do
   config :devloom, Devloom.Meetings.Transcripts,
     url: System.get_env("TRANSCRIPTION_URL"),
     secret: System.get_env("TRANSCRIPTION_SECRET")
+
+  config :devloom, Devloom.Meetings.OpenRouter,
+    api_key: System.get_env("OPENROUTER_API_KEY"),
+    summary_model: System.get_env("OPENROUTER_SUMMARY_MODEL")
 end
 
 # The metrics listener is separate from the public Phoenix endpoint. The local
