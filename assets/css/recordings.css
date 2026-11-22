@@ -39,6 +39,36 @@
 .recording-dialog-actions { display: flex; gap: 7px; }
 .recording-dialog video { display: block; width: 100%; aspect-ratio: 16 / 9; max-height: 72dvh; background: #0c1321; }
 .recording-playback-error { padding: 12px 16px; color: #952c3a; }
+.recording-text-unavailable { padding: 12px 16px; color: #5b6b83; font-size: 13px; }
+
+.recording-dialog-with-text { width: min(1120px, calc(100% - 24px)); }
+.recording-dialog-with-text .recording-dialog-body { border-top: 1px solid #e7edf5; }
+.recording-dialog-with-text .recording-media { min-width: 0; }
+.recording-text-pane { min-width: 0; background: #f7f9fc; }
+.recording-text-panel { display: grid; gap: 9px; padding: 14px 16px; border-bottom: 1px solid #e1e8f2; }
+.recording-text-panel header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.recording-text-panel h3 { display: flex; align-items: center; gap: 7px; color: #17243b; font-size: 14px; font-weight: 700; }
+.recording-text-panel h3 span { color: #3264ad; }
+.recording-text-panel .button { min-height: 32px; padding: 5px 9px; color: #245197; font-size: 12px; }
+.recording-text-status, .recording-text-provider { color: #5b6b83; font-size: 12px; line-height: 1.5; }
+.recording-text-provider { padding: 10px 16px; }
+.recording-text-error { color: #952c3a; }
+.recording-text-progress { display: flex; align-items: center; gap: 7px; }
+.recording-summary { display: grid; gap: 10px; color: #24344c; font-size: 13px; line-height: 1.55; overflow-wrap: anywhere; }
+.recording-summary h4 { margin-bottom: 2px; color: #17243b; font-size: 12px; font-weight: 700; }
+.recording-summary ul { display: grid; gap: 3px; padding-inline-start: 18px; list-style: disc; }
+.recording-transcript { max-height: 320px; overflow: auto; overscroll-behavior: contain; }
+.recording-transcript li { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: 9px; padding: 8px 4px 8px 0; font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; }
+.recording-transcript li + li { border-top: 1px solid #e7edf5; }
+.recording-timestamp { padding: 2px 6px; border-radius: 5px; background: #e6efff; color: #245197; cursor: pointer; font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.recording-timestamp:hover { background: #d6e5fd; }
+.recording-speaker { display: block; margin-bottom: 1px; color: #51637e; font-size: 11px; font-weight: 650; }
+
+@media (min-width: 800px) {
+  .recording-dialog-with-text .recording-dialog-body { display: grid; grid-template-columns: minmax(0, 1.85fr) minmax(290px, 1fr); }
+  .recording-dialog-with-text .recording-media { align-self: start; }
+  .recording-text-pane { max-height: 72dvh; overflow: auto; border-inline-start: 1px solid #e1e8f2; }
+}
 
 @media (max-width: 560px) {
   .recording-row { padding-right: 5px; }

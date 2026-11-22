@@ -41,6 +41,8 @@ services:
       LIVEKIT_API_URL: http://livekit:7880
       LIVEKIT_API_KEY: ${LIVEKIT_API_KEY:-devloom-local}
       LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET:-devloom-local-only-secret-1234567890}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      OPENROUTER_SUMMARY_MODEL: ${OPENROUTER_SUMMARY_MODEL:-}
     ports:
       - "127.0.0.1:${APP_PORT:-4000}:4000"
     volumes:

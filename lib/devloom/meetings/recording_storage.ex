@@ -72,7 +72,14 @@ defmodule Devloom.Meetings.RecordingStorage do
     end
   end
 
-  defp request(method, recording) do
+  def download(recording, path) do
+    case request(:get, recording, into: File.stream!(path), receive_timeout: 30_000, raw: true) do
+      {:ok, %{status: 200}} -> :ok
+      _ -> {:error, :recording_unavailable}
+    end
+  end
+
+  defp request(method, recording, overrides \\ []) do
     options = [
       method: method,
       url: object_url(recording),
@@ -83,7 +90,10 @@ defmodule Devloom.Meetings.RecordingStorage do
       connect_options: [timeout: 2_000]
     ]
 
-    Req.request(Keyword.merge(options, config()[:request_options] || []))
+    options
+    |> Keyword.merge(overrides)
+    |> Keyword.merge(config()[:request_options] || [])
+    |> Req.request()
   end
 
   defp object_url(recording) do
