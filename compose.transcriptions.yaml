@@ -1,0 +1,23 @@
+# Local, offline speech recognition. Use alongside compose.yaml.
+services:
+  transcription:
+    build:
+      context: ./docker/transcription
+    init: true
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "from urllib.request import urlopen; urlopen('http://127.0.0.1:8095/health', timeout=2).close()"]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+    environment:
+      LIVEKIT_URL: ws://livekit:7880
+      TRANSCRIPTION_SECRET: ${TRANSCRIPTION_SECRET:?Set a private transcription secret}
+    depends_on:
+      livekit:
+        condition: service_started
+
+  web:
+    environment:
+      TRANSCRIPTION_URL: http://transcription:8095
+      TRANSCRIPTION_SECRET: ${TRANSCRIPTION_SECRET:?Set a private transcription secret}

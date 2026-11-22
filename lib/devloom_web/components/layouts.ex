@@ -131,6 +131,15 @@ defmodule DevloomWeb.Layouts do
         </.link>
         <.link
           :if={@workspace}
+          id="mobile-nav-recordings"
+          navigate={~p"/workspaces/#{@workspace.id}/recordings"}
+          class={@active_view == "recordings" && "active"}
+          aria-current={@active_view == "recordings" && "page"}
+        >
+          <.icon name="hero-film" class="size-4" />Recordings
+        </.link>
+        <.link
+          :if={@workspace}
           id="mobile-nav-members"
           navigate={~p"/workspaces/#{@workspace.id}/members"}
           class={@active_view == "members" && "active"}
@@ -227,6 +236,17 @@ defmodule DevloomWeb.Layouts do
           </.link>
           <.link
             :if={@workspace}
+            id="nav-recordings"
+            navigate={~p"/workspaces/#{@workspace.id}/recordings"}
+            class={["nav-item", "workspace-chat-link", @active_view == "recordings" && "active"]}
+            aria-current={@active_view == "recordings" && "page"}
+            aria-label="Recordings"
+            title="Recordings"
+          >
+            <.icon name="hero-film" class="size-[18px]" /><span>Recordings</span>
+          </.link>
+          <.link
+            :if={@workspace}
             id="nav-members"
             navigate={~p"/workspaces/#{@workspace.id}/members"}
             class={["nav-item", "workspace-chat-link", @active_view == "members" && "active"]}
@@ -295,6 +315,7 @@ defmodule DevloomWeb.Layouts do
   defp view_title("whiteboard"), do: "Whiteboard"
   defp view_title("members"), do: "Members"
   defp view_title("meetings"), do: "Meetings"
+  defp view_title("recordings"), do: "Recordings"
   defp view_title("workspaces"), do: "Your workspaces"
   defp view_title("list"), do: "Work items"
   defp view_title(_), do: "Team board"

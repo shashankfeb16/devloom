@@ -14,6 +14,8 @@
             Workspace meeting
           </h2>
           <p data-meeting-state role="status"></p>
+          <p data-meeting-recording role="status" hidden></p>
+          <p id="meeting-transcript-indicator" role="status" hidden>Live transcript on</p>
         </div>
       </div>
       <div class="meeting-call-actions">
@@ -43,9 +45,55 @@
         </button>
       </div>
     </header>
-    <div class="meeting-call-stage">
-      <div data-meeting-shares class="meeting-shares" aria-label="Shared screens" hidden></div>
-      <div data-meeting-participants class="meeting-grid" aria-label="Meeting participants"></div>
+    <div class="meeting-call-content">
+      <div class="meeting-call-stage">
+        <div data-meeting-shares class="meeting-shares" aria-label="Shared screens" hidden></div>
+        <div data-meeting-participants class="meeting-grid" aria-label="Meeting participants">
+        </div>
+      </div>
+      <aside
+        id="meeting-transcript-panel"
+        class="meeting-transcript"
+        aria-labelledby="meeting-transcript-title"
+        hidden
+      >
+        <header class="meeting-transcript-heading">
+          <div>
+            <h3 id="meeting-transcript-title" tabindex="-1">Live transcript</h3>
+            <p>English · Available during the call</p>
+          </div>
+          <button
+            data-action="close-transcript"
+            type="button"
+            class="button"
+            aria-label="Close transcript"
+          >
+            <.icon name="hero-x-mark" class="size-4" />
+          </button>
+        </header>
+        <div
+          class="meeting-transcript-log"
+          data-meeting-transcript-log
+          role="log"
+          aria-labelledby="meeting-transcript-title"
+          aria-relevant="additions"
+          tabindex="0"
+        >
+          <p data-meeting-transcript-empty></p>
+          <ol id="meeting-transcript-lines"></ol>
+        </div>
+        <footer class="meeting-transcript-footer">
+          <button
+            id="meeting-transcript-control"
+            data-action="transcript-control"
+            type="button"
+            class="button"
+            hidden
+          >
+            Start transcript
+          </button>
+        </footer>
+      </aside>
     </div>
     <div data-meeting-audio hidden></div>
     <div class="meeting-controls" role="group" aria-label="Call controls">
@@ -72,6 +120,27 @@
         aria-pressed="false"
       >
         <.icon name="hero-computer-desktop" class="size-4" /><span>Share screen</span>
+      </button>
+      <button
+        id="meeting-transcript-toggle"
+        data-action="transcript"
+        type="button"
+        class="button meeting-control"
+        aria-expanded="false"
+        aria-controls="meeting-transcript-panel"
+        disabled
+      >
+        <.icon name="hero-document-text" class="size-4" /><span>Transcript</span>
+      </button>
+      <button
+        id="meeting-recording-control"
+        data-action="record"
+        type="button"
+        class="button meeting-control"
+        aria-pressed="false"
+        hidden
+      >
+        <.icon name="hero-film" class="size-4" /><span>Start recording</span>
       </button>
       <button data-action="audio" type="button" class="button meeting-control" hidden>Enable sound</button>
       <button data-action="end" type="button" class="button meeting-danger" hidden>End for everyone</button>
